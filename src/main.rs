@@ -3,7 +3,7 @@ use async_std::io;
 use async_std::net::{TcpListener, TcpStream, Shutdown};
 use async_std::prelude::*;
 use async_std::task;
-use bytes::{BytesMut};
+use bytes::{BytesMut, BufMut};
 
 async fn process_connection(stream: TcpStream) -> io::Result<()> {
     let mut reader = stream.clone();
@@ -20,12 +20,18 @@ async fn process_connection(stream: TcpStream) -> io::Result<()> {
         println!("received {n} bytes on this tcp socket");
         println!("-> {}\n", String::from_utf8_lossy(&readbuf[..n]));
 
-        let message_size: u32 = 0;
-        let error_code: u16 = 35;
         let mut output_buf = BytesMut::with_capacity(1500);
+        let message_size: u32 = 19;
         output_buf.extend_from_slice(&message_size.to_be_bytes());
         output_buf.extend_from_slice(&readbuf[8..12]);
-        output_buf.extend_from_slice(&error_code.to_be_bytes());
+        output_buf.extend_from_slice(&0_u16.to_be_bytes());
+        output_buf.put_i8(2); // api key records number +1
+        output_buf.extend_from_slice(&18_u16.to_be_bytes());
+        output_buf.extend_from_slice(&0_u16.to_be_bytes());
+        output_buf.extend_from_slice(&4_u16.to_be_bytes());
+        output_buf.put_i8(0);
+        output_buf.extend_from_slice(&420_u32.to_be_bytes());
+        output_buf.put_i8(0);
         let _ = writer.write_all(&output_buf[..]).await?;
     }
     let _ = writer.shutdown(Shutdown::Both);
