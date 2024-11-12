@@ -22,16 +22,27 @@ async fn process_connection(stream: TcpStream) -> io::Result<()> {
 
         let mut output_buf = BytesMut::with_capacity(1500);
         let message_size: u32 = 19;
-        output_buf.extend_from_slice(&message_size.to_be_bytes());
-        output_buf.extend_from_slice(&readbuf[8..12]);
-        output_buf.extend_from_slice(&0_u16.to_be_bytes());
-        output_buf.put_i8(2); // api key records number +1
-        output_buf.extend_from_slice(&18_u16.to_be_bytes());
-        output_buf.extend_from_slice(&0_u16.to_be_bytes());
-        output_buf.extend_from_slice(&4_u16.to_be_bytes());
-        output_buf.put_i8(0);
-        output_buf.extend_from_slice(&420_u32.to_be_bytes());
-        output_buf.put_i8(0);
+
+        let api_key = u16::from_be_bytes([readbuf[4], readbuf[5]]);
+        println!("api key received: {api_key}");
+
+        if api_key == 18 {
+            output_buf.extend_from_slice(&message_size.to_be_bytes());
+            output_buf.extend_from_slice(&readbuf[8..12]);
+            output_buf.extend_from_slice(&0_u16.to_be_bytes());
+            output_buf.put_i8(2); // api key records number +1
+            output_buf.extend_from_slice(&18_u16.to_be_bytes());
+            output_buf.extend_from_slice(&0_u16.to_be_bytes());
+            output_buf.extend_from_slice(&4_u16.to_be_bytes());
+            output_buf.put_i8(0);
+            output_buf.extend_from_slice(&420_u32.to_be_bytes());
+            output_buf.put_i8(0);
+        } else {
+            let message_size: u32 = 6;
+            output_buf.extend_from_slice(&message_size.to_be_bytes());
+            output_buf.extend_from_slice(&readbuf[8..12]);
+            output_buf.extend_from_slice(&35_u16.to_be_bytes());
+        }
         let _ = writer.write_all(&output_buf[..]).await?;
     }
     let _ = writer.shutdown(Shutdown::Both);
