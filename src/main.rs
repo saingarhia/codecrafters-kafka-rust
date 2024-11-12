@@ -21,10 +21,11 @@ async fn process_connection(stream: TcpStream) -> io::Result<()> {
         println!("-> {}\n", String::from_utf8_lossy(&readbuf[..n]));
 
         let message_size: u32 = 0;
-        let correlation_id: u32 = 7;
+        let error_code: u16 = 35;
         let mut output_buf = BytesMut::with_capacity(1500);
         output_buf.extend_from_slice(&message_size.to_be_bytes());
         output_buf.extend_from_slice(&readbuf[8..12]);
+        output_buf.extend_from_slice(&error_code.to_be_bytes());
         let _ = writer.write_all(&output_buf[..]).await?;
     }
     let _ = writer.shutdown(Shutdown::Both);
