@@ -24,9 +24,10 @@ async fn process_connection(stream: TcpStream) -> io::Result<()> {
         let message_size: u32 = 19;
 
         let api_key = u16::from_be_bytes([readbuf[4], readbuf[5]]);
-        println!("api key received: {api_key}");
+        let api_ver = u16::from_be_bytes([readbuf[6], readbuf[7]]);
+        println!("api key received: {api_key}, version: {api_ver}");
 
-        if api_key == 18 {
+        if api_ver <= 4 {
             output_buf.extend_from_slice(&message_size.to_be_bytes());
             output_buf.extend_from_slice(&readbuf[8..12]);
             output_buf.extend_from_slice(&0_u16.to_be_bytes());
