@@ -1,16 +1,15 @@
 #![allow(unused_imports)]
-use async_std::io;
-use async_std::net::{TcpListener, TcpStream, Shutdown};
-use async_std::prelude::*;
-use async_std::task;
+use std::io::{self, Read, Write};
+use std::net::{TcpListener, TcpStream, Shutdown};
+use std::prelude::*;
+use std::task;
 use bytes::{BytesMut, BufMut};
+use std::thread;
 
-async fn process_connection(stream: TcpStream) -> io::Result<()> {
-    let mut reader = stream.clone();
-    let mut writer = stream;
+fn process_connection(mut stream: TcpStream) -> io::Result<()> {
     let mut readbuf = [0; 1500];
     loop {
-        let n = reader.read(&mut readbuf).await?;
+        let n = stream.read(&mut readbuf)?;
         if n <= 0 {
             // close socket
             println!("received {n} bytes, closing this socket!!");
@@ -44,29 +43,23 @@ async fn process_connection(stream: TcpStream) -> io::Result<()> {
             output_buf.extend_from_slice(&readbuf[8..12]);
             output_buf.extend_from_slice(&35_u16.to_be_bytes());
         }
-        let _ = writer.write_all(&output_buf[..]).await?;
+        let _ = stream.write_all(&output_buf[..])?;
     }
-    let _ = writer.shutdown(Shutdown::Both);
+    let _ = stream.shutdown(Shutdown::Both);
     Ok(())
 
 }
 
-async fn process_tcp() -> std::io::Result<()> {
-    let listener = TcpListener::bind("127.0.0.1:9092").await?;
+fn process_tcp() -> std::io::Result<()> {
+    let listener = TcpListener::bind("127.0.0.1:9092")?;
     println!("Listening on {}", listener.local_addr()?);
-    let mut incoming = listener.incoming();
     
-     while let Some(stream) = incoming.next().await {
-        let stream = stream?;
-        task::spawn(async {
-            process_connection(stream).await.unwrap();
-        });
-     }
+    for stream in listener.incoming() {
+       thread::spawn(move || process_connection(stream?));
+    }
     Ok(())
 }
 
 fn main() {
-    task::block_on(async {
-            let _ = process_tcp().await;
-        });
+    let _ = process_tcp();
 }
