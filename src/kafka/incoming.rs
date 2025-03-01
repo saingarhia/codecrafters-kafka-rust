@@ -48,7 +48,7 @@ impl Request {
                         let _ = response.write(&0_i16.to_be_bytes());
                 }
                 // TODO - clean it up.. need +1 keys
-                let _ = response.write(&[apikey::SUPPORTED_APIKEYS.len() as u8]);
+                let _ = response.write(&[apikey::SUPPORTED_APIKEYS.len() as u8 + 1]);
                 apikey::SUPPORTED_APIKEYS.iter().for_each(|sk| {
                     let _ = response.write(&sk.key.to_be_bytes());
                     let _ = response.write(&sk.min.to_be_bytes());
