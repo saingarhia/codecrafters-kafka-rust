@@ -30,6 +30,8 @@ impl Partitions {
         //println!("partition index: {}", partition_index);
         let b = parser::read_byte(req)?;
         println!("Newly read byte: {}", b);
+        let b = parser::read_byte(req)?;
+        println!("Newly read byte: {}", b);
         parser::tag_buffer(req)?;
         println!("Now building final parition structure!!");
         Ok(Self {
