@@ -7,6 +7,8 @@ pub mod incoming;
 // supports version 0 through 4
 pub const MIN_SUPPORTED_API_VERSION: u16 = 0;
 pub const MAX_SUPPORTED_API_VERSION: u16 = 4;
+pub const MIN_SUPPORTED_DESCRIBE_PARTITION_VER: u16 = 0;
+pub const MAX_SUPPORTED_DESCRIBE_PARTITION_VER: u16 = 0;
 
 #[repr(u16)]
 #[derive(Debug)]

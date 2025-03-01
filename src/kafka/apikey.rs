@@ -3,23 +3,23 @@ use std::io::prelude::*;
 use std::io::{BufReader, Read};
 use crate::kafka::errors::{self, KafkaErrors};
 
-const FetchAPIKey: u16 = 1;
-const ApiVersionsAPIKey: u16 = 18;
-const DescribeTopicPartitionsAPIKey: u16 = 75;
+const FETCH_APIKEY: u16 = 1;
+const API_VERSIONS_APIKEY: u16 = 18;
+const DESCRIBE_PARTITIONS_APIKEY: u16 = 75;
 
 #[repr(u16)]
 #[derive(Debug, Copy, Clone)]
 pub enum ApiKey {
-    Fetch = 1,
-    ApiVersions = 18,
-    DescribeTopicPartitions = 75,
+    Fetch = FETCH_APIKEY,
+    ApiVersions = API_VERSIONS_APIKEY,
+    DescribeTopicPartitions = DESCRIBE_PARTITIONS_APIKEY,
 }
 
 impl ApiKey {
     pub fn parse(b: &mut BufReader<&[u8]>) -> errors::Result<Self> {
         let mut b0 = [0u8; 2];
         b.read_exact(&mut b0)?;
-        Ok(Self::try_from(i16::from_be_bytes(b0))?)
+        Ok(Self::try_from(u16::from_be_bytes(b0))?)
     }
 }
 
@@ -40,15 +40,36 @@ impl fmt::Display for ApiKey {
     }
 }
 
-impl TryFrom<i16> for ApiKey {
+impl TryFrom<u16> for ApiKey {
     type Error = crate::kafka::errors::KafkaErrors;
-    fn try_from(value: i16) -> Result<Self, Self::Error> {
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
-            1 => Ok(Self::Fetch),
-            18 => Ok(Self::ApiVersions),
-            75 => Ok(Self::DescribeTopicPartitions),
+            FETCH_APIKEY => Ok(Self::Fetch),
+            API_VERSIONS_APIKEY => Ok(Self::ApiVersions),
+            DESCRIBE_PARTITIONS_APIKEY => Ok(Self::DescribeTopicPartitions),
             i @ (0..=75) => Err(KafkaErrors::Unimplemented(format!("apikey {i}"))),
             i => Err(KafkaErrors::InvalidApiKey(format!("invalid apikey {i}"))),
         }
     }
 }
+
+pub struct SupportedApiKeys {
+    pub min: u16,
+    pub max: u16,
+    pub key: u16, 
+}
+
+pub const SUPPORTED_APIKEYS: &[SupportedApiKeys; 2] = &[
+    // API Versions request
+    SupportedApiKeys {
+        min: super::MIN_SUPPORTED_API_VERSION,
+        max: super::MAX_SUPPORTED_API_VERSION,
+        key: API_VERSIONS_APIKEY, 
+    },
+    // Describe partitions
+    SupportedApiKeys {
+        min: super::MIN_SUPPORTED_DESCRIBE_PARTITION_VER,
+        max: super::MAX_SUPPORTED_DESCRIBE_PARTITION_VER,
+        key: DESCRIBE_PARTITIONS_APIKEY, 
+    },
+];

@@ -33,7 +33,7 @@ impl Request {
 
     pub fn process(&self, response: &mut BufWriter<&mut [u8]>) -> usize {
         // fill in the correlation id
-        response.write(&self.header.get_correlation_id().to_be_bytes());
+        let _ = response.write(&self.header.get_correlation_id().to_be_bytes());
 
         println!("Building response for Request: {}", self);
         let api_ver = self.header.get_api_ver();
@@ -48,12 +48,14 @@ impl Request {
                         let _ = response.write(&0_i16.to_be_bytes());
                 }
                 // TODO - clean it up.. need +1 keys
-                let _ = response.write(&[2_u8]);
-                let _ = response.write(&self.header.get_api_key_num().to_be_bytes());
-                let _ = response.write(&MIN_SUPPORTED_API_VERSION.to_be_bytes());
-                let _ = response.write(&MAX_SUPPORTED_API_VERSION.to_be_bytes());
-                // tag buffer len
-                let _ = response.write(&[0_u8]);
+                let _ = response.write(&[apikey::SUPPORTED_APIKEYS.len() as u8]);
+                apikey::SUPPORTED_APIKEYS.iter().for_each(|sk| {
+                    let _ = response.write(&sk.key.to_be_bytes());
+                    let _ = response.write(&sk.min.to_be_bytes());
+                    let _ = response.write(&sk.max.to_be_bytes());
+                    // tag buffer len
+                    let _ = response.write(&[0_u8]);
+                });
                 // throttle time in ms
                 let _ = response.write(&0_u32.to_be_bytes());
                 // tag buffer len
