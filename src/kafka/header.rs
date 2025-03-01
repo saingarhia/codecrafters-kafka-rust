@@ -34,8 +34,8 @@ impl RequestHeader {
             req.read_to_string(&mut s)?;
             client_id.get_or_insert(s);
             // consume the extra tag buffer
-            let mut tag_buffer = [0_u8; 1];
-            req.read_exact(&mut tag_buffer)?;
+            //let mut tag_buffer = [0_u8; 1];
+            //req.read_exact(&mut tag_buffer)?;
         }
 
         Ok(Self {api_key, api_ver, correlation_id, client_id})

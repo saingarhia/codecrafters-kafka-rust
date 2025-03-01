@@ -18,6 +18,7 @@ impl Partitions {
     pub fn new(req: &mut BufReader<&[u8]>) -> errors::Result<Self> {
             // read the length and then process the array
         let topics = parser::array(req)?;
+        println!("Found topics!!");
         let response_partition_limit = parser::read_int(req)?;
         let topic_name = parser::compact_string(req)?;
         let partition_index = parser::read_int(req)?;
