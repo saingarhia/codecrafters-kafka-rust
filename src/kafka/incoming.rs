@@ -63,6 +63,8 @@ impl Request {
                 let _ = response.write(&[0_u8]);
             },
            body::RequestBody::DescribePartitions(p) => {
+                // tag buffer is first (immediately after correlation id) as per the test
+                let _ = response.write(&[0_u8]);
                 // throttleu time in ms 
                 let _ = response.write(&0_u32.to_be_bytes());
                 // topics array -> including length
