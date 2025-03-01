@@ -19,6 +19,9 @@ impl Partitions {
             // read the length and then process the array
         let topics = parser::array(req)?;
         println!("Found topics!!");
+        for t in &topics {
+            println!("topic name: {}", String::from_utf8_lossy(t));
+        }
         let response_partition_limit = parser::read_int(req)?;
         let topic_name = parser::compact_string(req)?;
         let partition_index = parser::read_int(req)?;
