@@ -1,7 +1,7 @@
 // implements incoming header
 use std::io::{self, BufReader, Read};
 use std::fmt;
-use crate::kafka::{apikey, errors};
+use crate::kafka::{apikey, errors, parser};
 
 #[derive(Debug, Clone)]
 pub struct RequestHeader {
