@@ -29,6 +29,7 @@ impl RequestHeader {
         let mut client_id: Option<String> = None;
         req.read_exact(&mut client_id_length)?;
         let client_id_length = i16::from_be_bytes(client_id_length);
+        println!("Clinet ID length: {}", client_id_length);
         if client_id_length > 0 {
             let mut s = String::new();
             req.read_to_string(&mut s)?;
