@@ -9,7 +9,7 @@ pub fn compact_string(req: &mut BufReader<&[u8]>) -> errors::Result<Vec<u8>> {
     if length[0] == 0 { return Ok(vec![]); }
 
     // read these many bytes and convert into string
-    let mut data = vec![0_u8; length[0] as usize];
+    let mut data = vec![0_u8; length[0] as usize - 1];
     req.read_exact(&mut data)?;
     Ok(data)
 }
