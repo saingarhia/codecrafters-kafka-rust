@@ -27,7 +27,7 @@ impl Request {
         // lets read message size
         // lets read the header
         let header = header::RequestHeader::new(req)?;
-        let body = body::RequestBody::new(req)?;
+        let body = body::RequestBody::new(req, &header)?;
         Ok(Self{header, body})
     }
 
@@ -37,9 +37,9 @@ impl Request {
 
         println!("Building response for Request: {}", self);
         let api_ver = self.header.get_api_ver();
-        match self.header.get_api_key() {
-           apikey::ApiKey::Fetch => {},
-           apikey::ApiKey::ApiVersions => {
+        match &self.body {
+           body::RequestBody::Fetch(_s) => {},
+           body::RequestBody::ApiVersions(_throttle, _tbuf)=> {
                 if api_ver < super::MIN_SUPPORTED_API_VERSION ||
                     api_ver > MAX_SUPPORTED_API_VERSION {
                         let ec = u16::from(ErrorCodes::UnsupportedAPIVersion);
@@ -61,7 +61,36 @@ impl Request {
                 // tag buffer len
                 let _ = response.write(&[0_u8]);
             },
-           _ => {},
+           body::RequestBody::DescribePartitions(p) => {
+                // throttleu time in ms 
+                let _ = response.write(&0_u32.to_be_bytes());
+                // topics array -> including length
+                let _ = response.write(&[p.topics.len() as u8 + 1]);
+                let ec = u16::from(ErrorCodes::UnsupportedTopicOrPartition);
+                let default_topic = "00000000-0000-0000-0000-000000000000";
+                p.topics.iter().for_each(|topic| {
+                    let _ = response.write(&ec.to_be_bytes());
+                    // length
+                    let _ = response.write(&[topic.len() as u8]);
+                    // topic
+                    let _ = response.write(topic);
+                    // topic ID " has to all zeros "
+                    let _ = response.write(&default_topic.as_bytes());
+                    // internal topic
+                    let _ = response.write(&[0_u8; 1]);
+                }); 
+                // partitions array -> empty shoud be 0?
+                let _ = response.write(&[1_u8; 1]);
+                // authorized operations
+                let _ = response.write(&1234_u32.to_be_bytes());
+
+                // tag buffer
+                let _ = response.write(&[0_u8; 1]);
+                // next cursor = NULL
+                let _ = response.write(&[0xFF_u8; 1]);
+                // tag buffer
+                let _ = response.write(&[0_u8; 1]);
+            },
         }
         response.buffer().len()
     }
