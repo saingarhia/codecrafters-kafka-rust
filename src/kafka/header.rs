@@ -29,8 +29,8 @@ impl RequestHeader {
         let s = parser::compact_string(req)?;
         if let Ok(ss) = String::from_utf8(s) {
             client_id.get_or_insert(ss);
-            //parser::tag_buffer(req)?;
         }
+        parser::tag_buffer(req)?;
 
         Ok(Self {api_key, api_ver, correlation_id, client_id})
     }

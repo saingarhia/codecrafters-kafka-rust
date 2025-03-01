@@ -17,7 +17,7 @@ pub fn compact_string(req: &mut BufReader<&[u8]>) -> errors::Result<Vec<u8>> {
 pub fn array(req: &mut BufReader<&[u8]>) -> errors::Result<Vec<Vec<u8>>> {
     let mut length = [0_u8; 1];
     req.read_exact(&mut length)?;
-    println!("length: {length:?}");
+    println!("number of topics: {}", length[0]);
     let mut result = vec![vec![]];
     for _i in 0..length[0]{
         println!("reading topic number: {_i}");
