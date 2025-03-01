@@ -24,18 +24,20 @@ impl Partitions {
         }
         let response_partition_limit = parser::read_int(req)?;
         println!("response partition limit: {}", response_partition_limit);
-        let topic_name = parser::compact_string(req)?;
-        println!("topic name: {}", String::from_utf8_lossy(&topic_name));
-        let partition_index = parser::read_int(req)?;
-        println!("partition index: {}", partition_index);
+        //let topic_name = parser::compact_string(req)?;
+        //println!("topic name: {}", String::from_utf8_lossy(&topic_name));
+        //let partition_index = parser::read_int(req)?;
+        //println!("partition index: {}", partition_index);
+        let b = parser::read_byte(req)?;
+        println!("Newly read byte: {}", b);
         parser::tag_buffer(req)?;
         println!("Now building final parition structure!!");
         Ok(Self {
             topics,
             response_partition_limit,
             cursor: Cursor {
-                topic_name,
-                partition_index,
+                topic_name: "".into(),
+                partition_index: 0,
             }
         })
     }
