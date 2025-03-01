@@ -68,7 +68,7 @@ impl Request {
                 // topics array -> including length
                 let _ = response.write(&[p.topics.len() as u8 + 1]);
                 let ec = u16::from(ErrorCodes::UnsupportedTopicOrPartition);
-                let default_topic = "00000000-0000-0000-0000-000000000000";
+                let default_topic = [0_u8; 16]; //"00000000-0000-0000-0000-000000000000"];
                 p.topics.iter().for_each(|topic| {
                     let _ = response.write(&ec.to_be_bytes());
                     // length
@@ -76,7 +76,8 @@ impl Request {
                     // topic
                     let _ = response.write(topic);
                     // topic ID " has to all zeros "
-                    let _ = response.write(&default_topic.as_bytes());
+                    //let _ = response.write(&default_topic.as_bytes());
+                    let _ = response.write(&default_topic);
                     // internal topic
                     let _ = response.write(&[0_u8; 1]);
                 }); 
