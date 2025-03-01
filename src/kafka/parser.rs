@@ -22,7 +22,7 @@ pub fn array(req: &mut BufReader<&[u8]>) -> errors::Result<Vec<Vec<u8>>> {
     for _i in 0..length[0]-1{
         println!("reading topic number: {_i}");
         result.push(compact_string(req)?);
-        tag_buffer(req)?;
+        //tag_buffer(req)?;
     }
     Ok(result)
 }
