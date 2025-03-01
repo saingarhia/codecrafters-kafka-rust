@@ -35,6 +35,7 @@ impl Request {
         // fill in the correlation id
         response.write(&self.header.get_correlation_id().to_be_bytes());
 
+        println!("Building response for Request: {}", self);
         let api_ver = self.header.get_api_ver();
         match self.header.get_api_key() {
            apikey::ApiKey::Fetch => {},
@@ -42,19 +43,19 @@ impl Request {
                 if api_ver < super::MIN_SUPPORTED_API_VERSION ||
                     api_ver > MAX_SUPPORTED_API_VERSION {
                         let ec = u16::from(ErrorCodes::UnsupportedAPIVersion);
-                        response.write(&ec.to_be_bytes());
+                        let _ = response.write(&ec.to_be_bytes());
                 } else {
-                        response.write(&0_i16.to_be_bytes());
+                        let _ = response.write(&0_i16.to_be_bytes());
                 }
                 // TODO - clean it up.. need +1 keys
-                response.write(&[2_u8]);
-                response.write(&self.header.get_api_key_num().to_be_bytes());
-                response.write(&MIN_SUPPORTED_API_VERSION.to_be_bytes());
-                response.write(&MAX_SUPPORTED_API_VERSION.to_be_bytes());
+                let _ = response.write(&[2_u8]);
+                let _ = response.write(&self.header.get_api_key_num().to_be_bytes());
+                let _ = response.write(&MIN_SUPPORTED_API_VERSION.to_be_bytes());
+                let _ = response.write(&MAX_SUPPORTED_API_VERSION.to_be_bytes());
                 // tag buffer len
-                response.write(&0_u32.to_be_bytes());
+                let _ = response.write(&0_u32.to_be_bytes());
                 // throttle time in ms
-                response.write(&0_u32.to_be_bytes());
+                let _ = response.write(&0_u32.to_be_bytes());
             },
            _ => {},
         }

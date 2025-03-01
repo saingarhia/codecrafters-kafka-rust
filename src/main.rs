@@ -25,7 +25,7 @@ fn process_connection(mut stream: TcpStream) -> kafka::errors::Result<()> {
         let mut req_data = vec![0; req_size];
         // lets read the reques
         let n = stream.read(&mut req_data)?;
-        if n <= req_size {
+        if n < req_size {
             // close socket
             println!("received {n} bytes, closing socket!!, expected: {req_size}");
             // TODO - should implement cursor if request is not fully here
