@@ -26,9 +26,15 @@ impl RequestHeader {
         let correlation_id = i32::from_be_bytes(cid);
 
         let mut client_id: Option<String> = None;
-        let s = parser::compact_string(req)?;
-        if let Ok(ss) = String::from_utf8(s) {
-            client_id.get_or_insert(ss);
+        let mut client_id_length_data = [0_u8; 2];
+        req.read_exact(&mut client_id_length_data)?;
+        let client_id_length = u16::from_be_bytes(client_id_length_data);
+        if client_id_length > 0 {
+            let mut client_id_data = vec![0_u8; client_id_length as usize];
+            req.read_exact(&mut client_id_data)?;
+            if let Ok(ss) = String::from_utf8(client_id_data) {
+                client_id.get_or_insert(ss);
+            }
         }
         parser::tag_buffer(req)?;
 
