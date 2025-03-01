@@ -53,9 +53,11 @@ impl Request {
                 let _ = response.write(&MIN_SUPPORTED_API_VERSION.to_be_bytes());
                 let _ = response.write(&MAX_SUPPORTED_API_VERSION.to_be_bytes());
                 // tag buffer len
-                let _ = response.write(&0_u32.to_be_bytes());
+                let _ = response.write(&[0_u8]);
                 // throttle time in ms
                 let _ = response.write(&0_u32.to_be_bytes());
+                // tag buffer len
+                let _ = response.write(&[0_u8]);
             },
            _ => {},
         }
