@@ -45,6 +45,7 @@ pub fn read_byte(req: &mut BufReader<&[u8]>) -> errors::Result<i8> {
     Ok(data[0] as i8)
 }
 pub fn tag_buffer(req: &mut BufReader<&[u8]>) -> errors::Result<()> {
-    let _ = read_byte(req)?;
+    let _v = read_byte(req)?;
+    println!("tagged buffer read: {}", _v);
     Ok(())
 }
