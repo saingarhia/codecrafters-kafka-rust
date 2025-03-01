@@ -27,6 +27,7 @@ impl Request {
         // lets read message size
         // lets read the header
         let header = header::RequestHeader::new(req)?;
+        println!("header: {}, now building body!!", header);
         let body = body::RequestBody::new(req, &header)?;
         Ok(Self{header, body})
     }
