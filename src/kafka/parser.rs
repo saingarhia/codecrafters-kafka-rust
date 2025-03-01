@@ -5,6 +5,8 @@ use crate::kafka::errors;
 pub fn compact_string(req: &mut BufReader<&[u8]>) -> errors::Result<Vec<u8>> {
     let mut length = [0_u8; 1];
     req.read_exact(&mut length)?;
+    if length[0] == 0 { return Ok(vec![]); }
+
     println!("reading string of length: {length:?}");
     // read these many bytes and convert into string
     let mut data = vec![0_u8; length[0] as usize];

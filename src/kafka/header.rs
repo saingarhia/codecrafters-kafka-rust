@@ -25,16 +25,10 @@ impl RequestHeader {
         req.read_exact(&mut cid)?;
         let correlation_id = i32::from_be_bytes(cid);
 
-        let mut client_id_length = [0_u8; 2];
         let mut client_id: Option<String> = None;
-        req.read_exact(&mut client_id_length)?;
-        let client_id_length = i16::from_be_bytes(client_id_length);
-        println!("Clinet ID length: {}", client_id_length);
-        if client_id_length > 0 {
-            let mut s = String::new();
-            req.read_to_string(&mut s)?;
-            client_id.get_or_insert(s);
-            // consume the extra tag buffer
+        let s = parser::compact_string(req)?;
+        if let Ok(ss) = String::from_utf8(s) {
+            client_id.get_or_insert(ss);
             parser::tag_buffer(req)?;
         }
 
