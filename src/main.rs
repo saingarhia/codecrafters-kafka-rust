@@ -34,6 +34,7 @@ fn process_connection(mut stream: TcpStream) -> kafka::errors::Result<()> {
         // process this request
         let mut req_reader = BufReader::new(&req_data[..]);
         let req_processor = kafka::incoming::Request::new(&mut req_reader)?;
+        println!("Request processor: {:?}", req_processor);
         // jump over the size field - populate it before sending on wire 
         let mut writer = BufWriter::new(&mut response[4..]);
         let message_size = req_processor.process(&mut writer) as u32;
