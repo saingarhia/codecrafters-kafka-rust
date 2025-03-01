@@ -1,7 +1,7 @@
+use crate::kafka::errors::{self, KafkaErrors};
 use std::fmt;
 use std::io::prelude::*;
 use std::io::{BufReader, Read};
-use crate::kafka::errors::{self, KafkaErrors};
 
 const FETCH_APIKEY: u16 = 1;
 const API_VERSIONS_APIKEY: u16 = 18;
@@ -29,7 +29,6 @@ impl From<ApiKey> for u16 {
     }
 }
 
-
 impl fmt::Display for ApiKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -56,7 +55,7 @@ impl TryFrom<u16> for ApiKey {
 pub struct SupportedApiKeys {
     pub min: u16,
     pub max: u16,
-    pub key: u16, 
+    pub key: u16,
 }
 
 pub const SUPPORTED_APIKEYS: &[SupportedApiKeys; 2] = &[
@@ -64,12 +63,12 @@ pub const SUPPORTED_APIKEYS: &[SupportedApiKeys; 2] = &[
     SupportedApiKeys {
         min: super::MIN_SUPPORTED_API_VERSION,
         max: super::MAX_SUPPORTED_API_VERSION,
-        key: API_VERSIONS_APIKEY, 
+        key: API_VERSIONS_APIKEY,
     },
     // Describe partitions
     SupportedApiKeys {
         min: super::MIN_SUPPORTED_DESCRIBE_PARTITION_VER,
         max: super::MAX_SUPPORTED_DESCRIBE_PARTITION_VER,
-        key: DESCRIBE_PARTITIONS_APIKEY, 
+        key: DESCRIBE_PARTITIONS_APIKEY,
     },
 ];

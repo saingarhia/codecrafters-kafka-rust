@@ -1,5 +1,5 @@
+use crate::kafka::{errors, parser};
 use std::io::{BufReader, Read};
-use crate::kafka::{parser, errors};
 
 #[derive(Debug, Clone)]
 pub struct Cursor {
@@ -11,12 +11,12 @@ pub struct Cursor {
 pub struct Partitions {
     pub topics: Vec<Vec<u8>>,
     pub response_partition_limit: i32,
-    pub cursor: Cursor, 
+    pub cursor: Cursor,
 }
 
 impl Partitions {
     pub fn new(req: &mut BufReader<&[u8]>) -> errors::Result<Self> {
-            // read the length and then process the array
+        // read the length and then process the array
         let topics = parser::array(req)?;
         println!("Found {} topics!!", topics.len());
         for t in &topics {
@@ -40,7 +40,7 @@ impl Partitions {
             cursor: Cursor {
                 topic_name: "".into(),
                 partition_index: 0,
-            }
+            },
         })
     }
 }

@@ -5,7 +5,7 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum KafkaErrors {
     Unimplemented(String),
-    InvalidApiKey(String)
+    InvalidApiKey(String),
 }
 
 impl std::fmt::Display for KafkaErrors {

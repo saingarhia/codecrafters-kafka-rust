@@ -1,12 +1,14 @@
 // parsing utilities
-use std::io::{BufReader, Read};
 use crate::kafka::errors;
+use std::io::{BufReader, Read};
 
 pub fn compact_string(req: &mut BufReader<&[u8]>) -> errors::Result<Vec<u8>> {
     let mut length = [0_u8; 1];
     req.read_exact(&mut length)?;
     println!("reading string of length: {length:?}");
-    if length[0] == 0 { return Ok(vec![]); }
+    if length[0] == 0 {
+        return Ok(vec![]);
+    }
 
     // read these many bytes and convert into string
     let mut data = vec![0_u8; length[0] as usize - 1];
@@ -17,9 +19,9 @@ pub fn compact_string(req: &mut BufReader<&[u8]>) -> errors::Result<Vec<u8>> {
 pub fn array(req: &mut BufReader<&[u8]>) -> errors::Result<Vec<Vec<u8>>> {
     let mut length = [0_u8; 1];
     req.read_exact(&mut length)?;
-    println!("number of topics: {}", length[0]-1);
+    println!("number of topics: {}", length[0] - 1);
     let mut result = vec![];
-    for _i in 0..length[0]-1{
+    for _i in 0..length[0] - 1 {
         println!("reading topic number: {_i}");
         result.push(compact_string(req)?);
         //tag_buffer(req)?;

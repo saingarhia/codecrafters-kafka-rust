@@ -1,11 +1,11 @@
 // implements Kafka body
+use crate::kafka::{apikey, errors, header, partitions};
 use std::fmt;
 use std::io::{BufReader, Read};
-use crate::kafka::{apikey, header, errors, partitions};
 
 #[derive(Debug, Clone)]
 pub enum RequestBody {
-    ApiVersions(u32, u8),   // throttle_ms and tagged buffer etc
+    ApiVersions(u32, u8), // throttle_ms and tagged buffer etc
     DescribePartitions(partitions::Partitions),
     Fetch(String),
 }
@@ -22,7 +22,6 @@ impl RequestBody {
         };
         Ok(s)
     }
-    
 }
 
 impl fmt::Display for RequestBody {

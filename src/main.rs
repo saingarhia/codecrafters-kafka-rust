@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 use std::io::{self, BufReader, BufWriter, Read, Write};
-use std::net::{TcpListener, TcpStream, Shutdown};
+use std::net::{Shutdown, TcpListener, TcpStream};
 use std::prelude::*;
 use std::thread;
 
@@ -35,18 +35,19 @@ fn process_connection(mut stream: TcpStream) -> kafka::errors::Result<()> {
         let mut req_reader = BufReader::new(&req_data[..]);
         let req_processor = kafka::incoming::Request::new(&mut req_reader)?;
         println!("Request processor: {:?}", req_processor);
-        // jump over the size field - populate it before sending on wire 
+        // jump over the size field - populate it before sending on wire
         let mut writer = BufWriter::new(&mut response[4..]);
         let message_size = req_processor.process(&mut writer) as u32;
         // we do not writer any more
         drop(writer);
 
-        message_size.to_be_bytes()
+        message_size
+            .to_be_bytes()
             .into_iter()
             .enumerate()
             .for_each(|(idx, v)| response[idx] = v);
-        
-        let _ = stream.write_all(&response[..message_size as usize+4])?; // 4 bytes for message size
+
+        let _ = stream.write_all(&response[..message_size as usize + 4])?; // 4 bytes for message size
     }
     let _ = stream.shutdown(Shutdown::Both);
     Ok(())
@@ -55,9 +56,9 @@ fn process_connection(mut stream: TcpStream) -> kafka::errors::Result<()> {
 fn process_tcp() -> kafka::errors::Result<()> {
     let listener = TcpListener::bind("127.0.0.1:9092")?;
     println!("Listening on {}", listener.local_addr()?);
-    
+
     for stream in listener.incoming() {
-       thread::spawn(move || process_connection(stream?));
+        thread::spawn(move || process_connection(stream?));
     }
     Ok(())
 }

@@ -1,7 +1,7 @@
 pub mod apikey;
+pub mod body;
 pub mod errors;
 pub mod header;
-pub mod body;
 pub mod incoming;
 pub mod parser;
 pub mod partitions;
@@ -15,7 +15,7 @@ pub const MAX_SUPPORTED_DESCRIBE_PARTITION_VER: u16 = 0;
 #[repr(u16)]
 #[derive(Debug)]
 pub enum ErrorCodes {
-    UnsupportedTopicOrPartition=3,
+    UnsupportedTopicOrPartition = 3,
     UnsupportedAPIVersion = 35,
 }
 
@@ -24,4 +24,3 @@ impl From<ErrorCodes> for u16 {
         e as u16
     }
 }
-

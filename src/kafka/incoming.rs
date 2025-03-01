@@ -1,7 +1,7 @@
-use std::io::{self, BufReader, BufWriter, Read, Write};
+use super::{ErrorCodes, MAX_SUPPORTED_API_VERSION, MIN_SUPPORTED_API_VERSION};
+use crate::kafka::{apikey, body, errors, header};
 use std::fmt;
-use crate::kafka::{header, body, errors, apikey};
-use super::{MIN_SUPPORTED_API_VERSION, MAX_SUPPORTED_API_VERSION, ErrorCodes};
+use std::io::{self, BufReader, BufWriter, Read, Write};
 
 // incoming request parser/handler
 //
@@ -13,12 +13,14 @@ pub struct Request {
 
 impl fmt::Display for Request {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}",
+        write!(
+            f,
+            "{}",
             format!(
-                concat!("Incoming Request:\n",
-                    "    Header: {}\n",
-                    "    Body: {}\n"),
-                self.header, self.body))
+                concat!("Incoming Request:\n", "    Header: {}\n", "    Body: {}\n"),
+                self.header, self.body
+            )
+        )
     }
 }
 
@@ -29,7 +31,7 @@ impl Request {
         let header = header::RequestHeader::new(req)?;
         println!("header: {}, now building body!!", header);
         let body = body::RequestBody::new(req, &header)?;
-        Ok(Self{header, body})
+        Ok(Self { header, body })
     }
 
     pub fn process(&self, response: &mut BufWriter<&mut [u8]>) -> usize {
@@ -39,14 +41,14 @@ impl Request {
         println!("Building response for Request: {}", self);
         let api_ver = self.header.get_api_ver();
         match &self.body {
-           body::RequestBody::Fetch(_s) => {},
-           body::RequestBody::ApiVersions(_throttle, _tbuf)=> {
-                if api_ver < super::MIN_SUPPORTED_API_VERSION ||
-                    api_ver > MAX_SUPPORTED_API_VERSION {
-                        let ec = u16::from(ErrorCodes::UnsupportedAPIVersion);
-                        let _ = response.write(&ec.to_be_bytes());
+            body::RequestBody::Fetch(_s) => {}
+            body::RequestBody::ApiVersions(_throttle, _tbuf) => {
+                if api_ver < super::MIN_SUPPORTED_API_VERSION || api_ver > MAX_SUPPORTED_API_VERSION
+                {
+                    let ec = u16::from(ErrorCodes::UnsupportedAPIVersion);
+                    let _ = response.write(&ec.to_be_bytes());
                 } else {
-                        let _ = response.write(&0_i16.to_be_bytes());
+                    let _ = response.write(&0_i16.to_be_bytes());
                 }
                 // TODO - clean it up.. need +1 keys
                 let _ = response.write(&[apikey::SUPPORTED_APIKEYS.len() as u8 + 1]);
@@ -61,17 +63,17 @@ impl Request {
                 let _ = response.write(&0_u32.to_be_bytes());
                 // tag buffer len
                 let _ = response.write(&[0_u8]);
-            },
-           body::RequestBody::DescribePartitions(p) => {
+            }
+            body::RequestBody::DescribePartitions(p) => {
                 // tag buffer is first (immediately after correlation id) as per the test
                 let _ = response.write(&[0_u8]);
-                // throttleu time in ms 
+                // throttleu time in ms
                 let _ = response.write(&0_u32.to_be_bytes());
                 // topics array -> including length
                 let _ = response.write(&[p.topics.len() as u8 + 1]);
                 let ec = u16::from(ErrorCodes::UnsupportedTopicOrPartition);
                 let default_topic = [0_u8; 16]; //"00000000-0000-0000-0000-000000000000"];
-                //
+                                                //
                 p.topics.iter().for_each(|topic| {
                     let _ = response.write(&ec.to_be_bytes());
                     // length
@@ -83,7 +85,7 @@ impl Request {
                     let _ = response.write(&default_topic);
                     // internal topic
                     let _ = response.write(&[0_u8; 1]);
-                }); 
+                });
                 // partitions array -> empty shoud be 0?
                 let _ = response.write(&[1_u8; 1]);
                 // authorized operations
@@ -95,7 +97,7 @@ impl Request {
                 let _ = response.write(&[0xFF_u8; 1]);
                 // tag buffer
                 let _ = response.write(&[0_u8; 1]);
-            },
+            }
         }
         response.buffer().len()
     }

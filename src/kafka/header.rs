@@ -1,21 +1,21 @@
 // implements incoming header
-use std::io::{self, BufReader, Read};
-use std::fmt;
 use crate::kafka::{apikey, errors, parser};
+use std::fmt;
+use std::io::{self, BufReader, Read};
 
 #[derive(Debug, Clone)]
 pub struct RequestHeader {
     api_key: apikey::ApiKey,
     api_ver: u16,
     correlation_id: i32,
-    client_id: Option<String>,// nullable string 
-    //tag_buffer: compact array
+    client_id: Option<String>, // nullable string
+                               //tag_buffer: compact array
 }
 
 impl RequestHeader {
     pub fn new(req: &mut BufReader<&[u8]>) -> errors::Result<Self> {
         let api_key = apikey::ApiKey::parse(req)?; // first 2 bytes
-        // lets read the version
+                                                   // lets read the version
         let mut ver = [0_u8; 2];
         req.read_exact(&mut ver)?;
         let api_ver = u16::from_be_bytes(ver);
@@ -38,7 +38,12 @@ impl RequestHeader {
         }
         parser::tag_buffer(req)?;
 
-        Ok(Self {api_key, api_ver, correlation_id, client_id})
+        Ok(Self {
+            api_key,
+            api_ver,
+            correlation_id,
+            client_id,
+        })
     }
 
     pub fn get_correlation_id(&self) -> i32 {
@@ -64,8 +69,13 @@ impl RequestHeader {
 
 impl fmt::Display for RequestHeader {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Api Key: {}, Api Version: {}, Correlation ID: {}, Client ID: {}",
-                self.api_key, self.api_ver, self.correlation_id,
-                self.client_id.clone().unwrap_or("NA".into()))
+        write!(
+            f,
+            "Api Key: {}, Api Version: {}, Correlation ID: {}, Client ID: {}",
+            self.api_key,
+            self.api_ver,
+            self.correlation_id,
+            self.client_id.clone().unwrap_or("NA".into())
+        )
     }
 }
