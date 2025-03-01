@@ -25,9 +25,9 @@ impl RequestHeader {
         req.read_exact(&mut cid)?;
         let correlation_id = i32::from_be_bytes(cid);
 
-        let client_id_length = [0_u8; 2];
+        let mut client_id_length = [0_u8; 2];
         let mut client_id: Option<String> = None;
-        req.read_exact(&mut cid)?;
+        req.read_exact(&mut client_id_length)?;
         let client_id_length = i16::from_be_bytes(client_id_length);
         if client_id_length > 0 {
             let mut s = String::new();
