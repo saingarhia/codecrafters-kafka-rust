@@ -71,7 +71,7 @@ impl Request {
                 let _ = response.write(&0_u32.to_be_bytes());
                 // topics array -> including length
                 let _ = response.write(&[p.topics.len() as u8 + 1]);
-                let ec = u16::from(ErrorCodes::UnsupportedTopicOrPartition);
+                let ec: u16 = 0; // let ec = u16::from(ErrorCodes::UnsupportedTopicOrPartition);
                 let default_topic = [0_u8; 16]; //"00000000-0000-0000-0000-000000000000"];
                                                 //
                 p.topics.iter().for_each(|topic| {
