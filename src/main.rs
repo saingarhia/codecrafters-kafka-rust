@@ -2,11 +2,18 @@
 use std::io::{self, BufReader, BufWriter, Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::prelude::*;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 mod kafka;
 
-fn process_connection(mut stream: TcpStream) -> kafka::errors::Result<()> {
+const METADATA_FILENAME: &str =
+    "/tmp/kraft-combined-logs/__cluster_metadata-0/00000000000000000000.log";
+
+fn process_connection(
+    mut stream: TcpStream,
+    _metadata: Arc<Mutex<kafka::metadata::Metadata>>,
+) -> kafka::errors::Result<()> {
     let mut size = [0; 4];
     let mut response = [0_u8; 1500]; // reuse
     loop {
@@ -54,11 +61,16 @@ fn process_connection(mut stream: TcpStream) -> kafka::errors::Result<()> {
 }
 
 fn process_tcp() -> kafka::errors::Result<()> {
+    let metadata: Arc<Mutex<kafka::metadata::Metadata>> = Arc::new(Mutex::new(
+        kafka::metadata::Metadata::new(METADATA_FILENAME)?,
+    ));
+    println!("read metadata: {:?}", metadata);
     let listener = TcpListener::bind("127.0.0.1:9092")?;
     println!("Listening on {}", listener.local_addr()?);
 
     for stream in listener.incoming() {
-        thread::spawn(move || process_connection(stream?));
+        let mclone = Arc::clone(&metadata);
+        thread::spawn(move || process_connection(stream?, mclone));
     }
     Ok(())
 }

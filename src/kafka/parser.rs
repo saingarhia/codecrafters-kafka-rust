@@ -1,8 +1,14 @@
 // parsing utilities
 use crate::kafka::errors;
+use std::convert::TryInto;
 use std::io::{BufReader, Read};
 
-pub fn compact_string(req: &mut BufReader<&[u8]>) -> errors::Result<Vec<u8>> {
+fn convert<T, const N: usize>(v: Vec<T>) -> [T; N] {
+    v.try_into()
+        .unwrap_or_else(|v: Vec<T>| panic!("Expected a Vec of length {} but it was {}", N, v.len()))
+}
+
+pub fn read_compact_string(req: &mut dyn Read) -> errors::Result<Vec<u8>> {
     let mut length = [0_u8; 1];
     req.read_exact(&mut length)?;
     println!("reading string of length: {length:?}");
@@ -16,38 +22,95 @@ pub fn compact_string(req: &mut BufReader<&[u8]>) -> errors::Result<Vec<u8>> {
     Ok(data)
 }
 
-pub fn array(req: &mut BufReader<&[u8]>) -> errors::Result<Vec<Vec<u8>>> {
+pub fn array(req: &mut dyn Read) -> errors::Result<Vec<Vec<u8>>> {
     let mut length = [0_u8; 1];
     req.read_exact(&mut length)?;
-    println!("number of topics: {}", length[0] - 1);
     let mut result = vec![];
     for _i in 0..length[0] - 1 {
-        println!("reading topic number: {_i}");
-        result.push(compact_string(req)?);
+        result.push(read_compact_string(req)?);
         //tag_buffer(req)?;
     }
     Ok(result)
 }
 
-pub fn read_int(req: &mut BufReader<&[u8]>) -> errors::Result<i32> {
+fn read_bytes<T: Sized>(req: &mut dyn Read) -> errors::Result<Vec<u8>> {
+    let mut data: Vec<u8> = vec![0_u8; std::mem::size_of::<T>()];
+    req.read_exact(&mut data[..])?;
+    Ok(data)
+}
+
+pub fn read_u128(req: &mut dyn Read) -> errors::Result<u128> {
+    let rv = convert::<u8, 16>(read_bytes::<u128>(req)?);
+    Ok(u128::from_be_bytes(rv))
+}
+
+pub fn read_u64(req: &mut dyn Read) -> errors::Result<u64> {
+    let rv = convert::<u8, 8>(read_bytes::<u64>(req)?);
+    Ok(u64::from_be_bytes(rv))
+}
+
+pub fn read_int(req: &mut dyn Read) -> errors::Result<i32> {
     let mut data = [0_u8; 4];
     req.read_exact(&mut data)?;
     Ok(i32::from_be_bytes(data))
 }
 
-pub fn read_short(req: &mut BufReader<&[u8]>) -> errors::Result<i16> {
+pub fn read_short(req: &mut dyn Read) -> errors::Result<i16> {
     let mut data = [0_u8; 2];
     req.read_exact(&mut data)?;
     Ok(i16::from_be_bytes(data))
 }
 
-pub fn read_byte(req: &mut BufReader<&[u8]>) -> errors::Result<i8> {
+pub fn read_byte(req: &mut dyn Read) -> errors::Result<i8> {
     let mut data = [0_u8; 1];
     req.read_exact(&mut data)?;
     Ok(data[0] as i8)
 }
-pub fn tag_buffer(req: &mut BufReader<&[u8]>) -> errors::Result<()> {
+pub fn tag_buffer(req: &mut dyn Read) -> errors::Result<()> {
     let _v = read_byte(req)?;
     println!("tagged buffer read: {}", _v);
     Ok(())
+}
+
+pub fn read_varint(req: &mut dyn Read) -> errors::Result<i8> {
+    let mut buffer = [0u8; 1];
+    req.read_exact(&mut buffer)?;
+    let x = i8::from_be_bytes(buffer);
+    if x < 0 {
+        let mut buffer = [0u8; 1];
+        req.read_exact(&mut buffer)?;
+        let y = (x as u8) as i16;
+        let c = (y >> 1) ^ -(y & 1);
+        return Ok(c as i8);
+    }
+    Ok((x >> 1) ^ -(x & 1)) //zigzag decode
+}
+
+#[allow(dead_code)]
+fn decode_nullable_string(req: &mut dyn Read) -> errors::Result<Option<String>> {
+    let n = read_byte(req)?;
+    if n == -1 {
+        return Ok(None);
+    }
+    let n2 = read_byte(req)? as u8;
+    let size = i16::from_be_bytes([n as u8, n2]);
+    let mut buffer = vec![0u8; size as usize];
+    req.read_exact(&mut buffer[..])?;
+    Ok(Some(String::from_utf8(buffer)?))
+}
+
+pub fn read_int_array(req: &mut dyn Read) -> errors::Result<Vec<i32>> {
+    let num = read_byte(req)? as usize - 1; // number of elements in the array
+    (0..num)
+        .into_iter()
+        .map(|_| read_int(req))
+        .collect::<errors::Result<_>>()
+}
+
+pub fn read_u128_array(req: &mut dyn Read) -> errors::Result<Vec<u128>> {
+    let num = read_byte(req)? as usize - 1; // number of elements in the array
+    (0..num)
+        .into_iter()
+        .map(|_| read_u128(req))
+        .collect::<errors::Result<_>>()
 }

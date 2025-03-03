@@ -3,6 +3,7 @@ pub mod body;
 pub mod errors;
 pub mod header;
 pub mod incoming;
+pub mod metadata;
 pub mod parser;
 pub mod partitions;
 
