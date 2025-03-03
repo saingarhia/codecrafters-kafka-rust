@@ -1,7 +1,7 @@
 // implements Kafka body
 use crate::kafka::{apikey, errors, header, partitions};
 use std::fmt;
-use std::io::{BufReader, Read};
+use std::io::Read;
 
 #[derive(Debug, Clone)]
 pub enum RequestBody {
@@ -11,7 +11,7 @@ pub enum RequestBody {
 }
 
 impl RequestBody {
-    pub fn new(req: &mut BufReader<&[u8]>, t: &header::RequestHeader) -> errors::Result<Self> {
+    pub fn new<R: Read>(req: &mut R, t: &header::RequestHeader) -> errors::Result<Self> {
         let s = match t.get_api_key() {
             apikey::ApiKey::Fetch => RequestBody::Fetch("not implemented".into()),
             apikey::ApiKey::ApiVersions => RequestBody::ApiVersions(0, 0),

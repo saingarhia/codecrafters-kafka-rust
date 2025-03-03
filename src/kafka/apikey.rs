@@ -1,7 +1,7 @@
 use crate::kafka::errors::{self, KafkaErrors};
 use std::fmt;
 use std::io::prelude::*;
-use std::io::{BufReader, Read};
+use std::io::Read;
 
 const FETCH_APIKEY: u16 = 1;
 const API_VERSIONS_APIKEY: u16 = 18;
@@ -16,7 +16,7 @@ pub enum ApiKey {
 }
 
 impl ApiKey {
-    pub fn parse(b: &mut BufReader<&[u8]>) -> errors::Result<Self> {
+    pub fn parse<R: Read>(b: &mut R) -> errors::Result<Self> {
         let mut b0 = [0u8; 2];
         b.read_exact(&mut b0)?;
         Ok(Self::try_from(u16::from_be_bytes(b0))?)

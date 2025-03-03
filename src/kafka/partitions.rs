@@ -1,12 +1,14 @@
 use crate::kafka::{errors, parser};
-use std::io::{BufReader, Read};
+use std::io::Read;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Cursor {
     pub topic_name: Vec<u8>,
     pub partition_index: i32,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Partitions {
     pub topics: Vec<Vec<u8>>,
@@ -15,7 +17,7 @@ pub struct Partitions {
 }
 
 impl Partitions {
-    pub fn new(req: &mut BufReader<&[u8]>) -> errors::Result<Self> {
+    pub fn new<R: Read>(req: &mut R) -> errors::Result<Self> {
         // read the length and then process the array
         let topics = parser::array(req)?;
         println!("Found {} topics!!", topics.len());

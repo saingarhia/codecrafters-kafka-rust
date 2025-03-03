@@ -44,7 +44,8 @@ fn process_connection(
         println!("Request processor: {:?}", req_processor);
         // jump over the size field - populate it before sending on wire
         let mut writer = BufWriter::new(&mut response[4..]);
-        let message_size = req_processor.process(&mut writer) as u32;
+        req_processor.process(&mut writer)?;
+        let message_size = writer.buffer().len() as u32;
         // we do not writer any more
         drop(writer);
 

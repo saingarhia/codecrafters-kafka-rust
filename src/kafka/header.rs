@@ -1,7 +1,7 @@
 // implements incoming header
 use crate::kafka::{apikey, errors, parser};
 use std::fmt;
-use std::io::{self, BufReader, Read};
+use std::io::{self, Read};
 
 #[derive(Debug, Clone)]
 pub struct RequestHeader {
@@ -12,8 +12,9 @@ pub struct RequestHeader {
                                //tag_buffer: compact array
 }
 
+#[allow(dead_code)]
 impl RequestHeader {
-    pub fn new(req: &mut BufReader<&[u8]>) -> errors::Result<Self> {
+    pub fn new<R: Read>(req: &mut R) -> errors::Result<Self> {
         let api_key = apikey::ApiKey::parse(req)?; // first 2 bytes
                                                    // lets read the version
         let mut ver = [0_u8; 2];

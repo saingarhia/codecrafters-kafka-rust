@@ -1,7 +1,7 @@
 use super::{ErrorCodes, MAX_SUPPORTED_API_VERSION, MIN_SUPPORTED_API_VERSION};
 use crate::kafka::{apikey, body, errors, header};
 use std::fmt;
-use std::io::{self, BufReader, BufWriter, Read, Write};
+use std::io::{self, Read, Write};
 
 // incoming request parser/handler
 //
@@ -25,7 +25,7 @@ impl fmt::Display for Request {
 }
 
 impl Request {
-    pub fn new(req: &mut BufReader<&[u8]>) -> errors::Result<Self> {
+    pub fn new<R: Read>(req: &mut R) -> errors::Result<Self> {
         // lets read message size
         // lets read the header
         let header = header::RequestHeader::new(req)?;
@@ -34,7 +34,7 @@ impl Request {
         Ok(Self { header, body })
     }
 
-    pub fn process(&self, response: &mut BufWriter<&mut [u8]>) -> usize {
+    pub fn process<W: Write>(&self, response: &mut W) -> errors::Result<()> {
         // fill in the correlation id
         let _ = response.write(&self.header.get_correlation_id().to_be_bytes());
 
@@ -99,6 +99,6 @@ impl Request {
                 let _ = response.write(&[0_u8; 1]);
             }
         }
-        response.buffer().len()
+        Ok(())
     }
 }

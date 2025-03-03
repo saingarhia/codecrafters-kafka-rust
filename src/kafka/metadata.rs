@@ -5,16 +5,19 @@ use std::io::{BufReader, Read};
 
 use crate::kafka::parser;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct TopicMetadata {
     pub uuid: u128,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct PartitionMetadata {
     pub partition_id: i32,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Metadata {
     pub topic_map: HashMap<String, TopicMetadata>,
@@ -28,7 +31,7 @@ impl Metadata {
         Self::decode(&mut reader)
     }
 
-    fn decode(buffer: &mut BufReader<File>) -> errors::Result<Self> {
+    fn decode<R: Read>(buffer: &mut R) -> errors::Result<Self> {
         let mut topic_map = HashMap::new();
         let mut partition_map = HashMap::new();
 
