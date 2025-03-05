@@ -93,18 +93,32 @@ impl Request {
                                 is_internal: false,
                                 tag_buffer: 0,
                                 partitions: partition.map_or(vec![], |pp| {
-                                    vec![partitions::Partition {
-                                        error_code: 0,
-                                        partition_index: pp.partition_id as u32,
-                                        leader_id: 0,
-                                        leader_epoch: 0,
-                                        replica_nodes: vec![],
-                                        isr_nodes: vec![],
-                                        eligible_leader_replicas: vec![],
-                                        last_known_elr: vec![],
-                                        offline_replicas: vec![],
-                                        tag_buffer: 0,
-                                    }]
+                                    vec![
+                                        partitions::Partition {
+                                            error_code: 0,
+                                            partition_index: pp.partition_id as u32,
+                                            leader_id: 0,
+                                            leader_epoch: 0,
+                                            replica_nodes: vec![],
+                                            isr_nodes: vec![],
+                                            eligible_leader_replicas: vec![],
+                                            last_known_elr: vec![],
+                                            offline_replicas: vec![],
+                                            tag_buffer: 0,
+                                        },
+                                        partitions::Partition {
+                                            error_code: 0,
+                                            partition_index: 0, //pp.partition_id as u32,
+                                            leader_id: 0,
+                                            leader_epoch: 0,
+                                            replica_nodes: vec![],
+                                            isr_nodes: vec![],
+                                            eligible_leader_replicas: vec![],
+                                            last_known_elr: vec![],
+                                            offline_replicas: vec![],
+                                            tag_buffer: 0,
+                                        },
+                                    ]
                                 }),
                                 topic_authorized_operations: 0x1234,
                             }
