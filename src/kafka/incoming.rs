@@ -112,7 +112,7 @@ impl Request {
                                         //p.response_partition_limit {
                                         ps.push(partitions::Partition {
                                             error_code: 0,
-                                            partition_index: pp[i].partition_id as u32 + i as u32,
+                                            partition_index: pp[i].partition_id as u32,
                                             leader_id: 0,
                                             leader_epoch: 0,
                                             replica_nodes: vec![],
