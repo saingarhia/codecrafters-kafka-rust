@@ -113,6 +113,7 @@ impl Topic {
         writer::write_nullable_compact_string(resp, self.name.as_deref())?;
         writer::write_bytes(resp, &self.topic_id)?;
         // TAG BUFFER ?? todo - check
+        writer::write_bytes(resp, &self.tag_buffer)?;
         writer::write_bool(resp, self.is_internal)?;
         writer::write_varint(resp, self.partitions.len() + 1)?;
         self.partitions.iter().try_for_each(|p| p.serialize(resp))?;
