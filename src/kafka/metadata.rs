@@ -72,15 +72,19 @@ impl Metadata {
                 match value_type {
                     12 => {
                         let name = parser::read_compact_string(buffer)?;
-                        println!("Feature Level Record name {i}: {:?}", name);
+                        println!(
+                            "Feature Level Record name {i}: {:?} - {}",
+                            name,
+                            String::from_utf8(name.clone())
+                        );
                         let _feature_level = parser::read_short(buffer)?;
                         let tagged_field = parser::read_byte(buffer)?;
                         assert_eq!(tagged_field, 0);
                     }
                     2 => {
                         let topic_name = parser::read_compact_string(buffer)?;
-                        //let topic_name = String::from_utf8(topic_name)?;
-                        println!("Topic Record name {i}: {:?}", topic_name);
+                        let _topic_name = String::from_utf8(topic_name)?;
+                        println!("Topic Record name {i}: {:?} - {}", topic_name, _topic_name);
                         let topic_uuid = parser::read_u128(buffer)?;
                         topic_map
                             .entry(topic_name)
