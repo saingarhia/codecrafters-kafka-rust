@@ -93,10 +93,11 @@ impl Request {
                                 is_internal: false,
                                 tag_buffer: 0,
                                 partitions: partition.map_or(vec![], |pp| {
-                                    vec![
-                                        partitions::Partition {
+                                    let mut ps = vec![];
+                                    for i in 0..p.response_partition_limit {
+                                        ps.push(partitions::Partition {
                                             error_code: 0,
-                                            partition_index: pp.partition_id as u32,
+                                            partition_index: pp.partition_id as u32 + i as u32,
                                             leader_id: 0,
                                             leader_epoch: 0,
                                             replica_nodes: vec![],
@@ -105,20 +106,9 @@ impl Request {
                                             last_known_elr: vec![],
                                             offline_replicas: vec![],
                                             tag_buffer: 0,
-                                        },
-                                        partitions::Partition {
-                                            error_code: 0,
-                                            partition_index: pp.partition_id as u32 + 1,
-                                            leader_id: 0,
-                                            leader_epoch: 0,
-                                            replica_nodes: vec![],
-                                            isr_nodes: vec![],
-                                            eligible_leader_replicas: vec![],
-                                            last_known_elr: vec![],
-                                            offline_replicas: vec![],
-                                            tag_buffer: 0,
-                                        },
-                                    ]
+                                        });
+                                    }
+                                    ps
                                 }),
                                 topic_authorized_operations: 0x1234,
                             }

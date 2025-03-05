@@ -12,7 +12,7 @@ pub struct Cursor {
 #[derive(Debug, Clone)]
 pub struct PartitionsRequest {
     pub topics: Vec<Vec<u8>>,
-    pub response_partition_limit: i32,
+    pub response_partition_limit: u8,
     pub cursor: Cursor,
 }
 
@@ -24,12 +24,12 @@ impl PartitionsRequest {
         for t in &topics {
             println!("topic name: {}", String::from_utf8_lossy(t));
         }
-        let response_partition_limit = parser::read_int(req)?;
+        let response_partition_limit = parser::read_byte(req)? as u8;
         println!("response partition limit: {}", response_partition_limit);
         //let topic_name = parser::compact_string(req)?;
         //println!("topic name: {}", String::from_utf8_lossy(&topic_name));
-        //let partition_index = parser::read_int(req)?;
-        //println!("partition index: {}", partition_index);
+        let partition_index = parser::read_int(req)?;
+        println!("partition index: {}", partition_index);
         let b = parser::read_byte(req)?;
         println!("Newly read byte: {}", b);
         let b = parser::read_byte(req)?;
