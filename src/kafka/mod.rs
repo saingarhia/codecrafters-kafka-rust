@@ -12,7 +12,10 @@ pub mod writer;
 pub const MIN_SUPPORTED_API_VERSION: u16 = 0;
 pub const MAX_SUPPORTED_API_VERSION: u16 = 4;
 pub const MIN_SUPPORTED_DESCRIBE_PARTITION_VER: u16 = 0;
-pub const MAX_SUPPORTED_DESCRIBE_PARTITION_VER: u16 = 16;
+pub const MAX_SUPPORTED_DESCRIBE_PARTITION_VER: u16 = 0;
+
+pub const MIN_SUPPORTED_FETCH_VER: u16 = 0;
+pub const MAX_SUPPORTED_FETCH_VER: u16 = 16;
 
 #[repr(u16)]
 #[derive(Debug)]
