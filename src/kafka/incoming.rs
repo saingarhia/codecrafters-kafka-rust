@@ -75,12 +75,15 @@ impl Request {
                 writer::write_bytes(response, &0_u8)?;
 
                 let metadata = metadata.lock().unwrap();
+                let mut partitions_included = 0;
+                let topics_length = p.topics.len();
                 let pr = partitions::PartitionsResponse {
                     throttle_ms: 0,
                     topics: p
                         .topics
                         .iter()
-                        .map(|t| {
+                        .enumerate()
+                        .map(|(topic_idx, t)| {
                             let name = t.clone().to_vec(); //.clone();
                             let topic = metadata.topic_map.get(&name);
                             let uuid = topic.map(|tt| tt.uuid).unwrap_or(0);
@@ -96,7 +99,13 @@ impl Request {
                                 tag_buffer: 0,
                                 partitions: partition.map_or(vec![], |pp| {
                                     let mut ps = vec![];
-                                    for i in 0..2 {
+                                    let pps_to_include = if topic_idx == topics_length - 1 {
+                                        1
+                                    } else {
+                                        p.response_partition_limit - partitions_included
+                                    };
+                                    partitions_included += pps_to_include;
+                                    for i in 0..pps_to_include {
                                         //p.response_partition_limit {
                                         ps.push(partitions::Partition {
                                             error_code: 0,
