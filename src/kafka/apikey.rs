@@ -58,7 +58,7 @@ pub struct SupportedApiKeys {
     pub key: u16,
 }
 
-pub const SUPPORTED_APIKEYS: &[SupportedApiKeys; 2] = &[
+pub const SUPPORTED_APIKEYS: &[SupportedApiKeys; 1] = &[
     // API Versions request
     /*    SupportedApiKeys {
             min: super::MIN_SUPPORTED_API_VERSION,
