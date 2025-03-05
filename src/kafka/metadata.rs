@@ -73,7 +73,7 @@ impl Metadata {
                     12 => {
                         let name = parser::read_compact_string(buffer)?;
                         println!(
-                            "Feature Level Record name {i}: {:?} - {}",
+                            "Feature Level Record name {i}: {:?} - {:?}",
                             name,
                             String::from_utf8(name.clone())
                         );
@@ -83,7 +83,7 @@ impl Metadata {
                     }
                     2 => {
                         let topic_name = parser::read_compact_string(buffer)?;
-                        let _topic_name = String::from_utf8(topic_name)?;
+                        let _topic_name = String::from_utf8(topic_name.clone())?;
                         println!("Topic Record name {i}: {:?} - {}", topic_name, _topic_name);
                         let topic_uuid = parser::read_u128(buffer)?;
                         topic_map
