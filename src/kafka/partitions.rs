@@ -24,9 +24,6 @@ impl PartitionsRequest {
         for t in &topics {
             println!("topic name: {}", String::from_utf8_lossy(t));
         }
-        // tag buffer
-        parser::read_byte(req)?;
-
         let response_partition_limit = parser::read_int(req)?;
         println!("response partition limit: {}", response_partition_limit);
         //let topic_name = parser::compact_string(req)?;
