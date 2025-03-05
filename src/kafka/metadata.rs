@@ -109,6 +109,7 @@ impl Metadata {
                         println!("directories: {:?}", directory_array);
                         let tagged_field = parser::read_byte(buffer)?;
                         assert_eq!(tagged_field, 0);
+                        println!("Adding topic_uuid: {topic_uuid} for partition: {partition_id}");
                         partition_map
                             .entry(topic_uuid)
                             .or_insert(PartitionMetadata { partition_id });
