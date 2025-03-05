@@ -58,14 +58,13 @@ pub struct SupportedApiKeys {
     pub key: u16,
 }
 
-pub const SUPPORTED_APIKEYS: &[SupportedApiKeys; 1] = &[
+pub const SUPPORTED_APIKEYS: &[SupportedApiKeys; 2] = &[
     // API Versions request
-    /*    SupportedApiKeys {
-            min: super::MIN_SUPPORTED_API_VERSION,
-            max: super::MAX_SUPPORTED_API_VERSION,
-            key: API_VERSIONS_APIKEY,
-        },
-    */
+    SupportedApiKeys {
+        min: super::MIN_SUPPORTED_API_VERSION,
+        max: super::MAX_SUPPORTED_API_VERSION,
+        key: API_VERSIONS_APIKEY,
+    },
     // Describe partitions
     SupportedApiKeys {
         min: super::MIN_SUPPORTED_DESCRIBE_PARTITION_VER,
