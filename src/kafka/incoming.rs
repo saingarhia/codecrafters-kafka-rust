@@ -1,5 +1,5 @@
 use super::{ErrorCodes, MAX_SUPPORTED_API_VERSION, MIN_SUPPORTED_API_VERSION};
-use crate::kafka::{apikey, body, errors, header, metadata, partitions};
+use crate::kafka::{apikey, body, errors, header, metadata, partitions, writer};
 use std::fmt;
 use std::fs::metadata;
 use std::io::{self, Read, Write};
@@ -71,8 +71,10 @@ impl Request {
                 let _ = response.write(&[0_u8]);
             }
             body::RequestBody::DescribePartitions(p) => {
-                let metadata = metadata.lock().unwrap();
                 // tag buffer is first (immediately after correlation id) as per the test
+                writer::write_bytes(response, &0_u8)?;
+
+                let metadata = metadata.lock().unwrap();
                 let pr = partitions::PartitionsResponse {
                     throttle_ms: 0,
                     topics: p
