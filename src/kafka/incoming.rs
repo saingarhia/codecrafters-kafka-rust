@@ -108,7 +108,7 @@ impl Request {
                                         },
                                         partitions::Partition {
                                             error_code: 0,
-                                            partition_index: 0, //pp.partition_id as u32,
+                                            partition_index: pp.partition_id as u32 + 1,
                                             leader_id: 0,
                                             leader_epoch: 0,
                                             replica_nodes: vec![],
