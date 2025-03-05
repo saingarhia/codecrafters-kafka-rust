@@ -88,9 +88,6 @@ impl Request {
                             let topic = metadata.topic_map.get(&name);
                             let uuid = topic.map(|tt| tt.uuid).unwrap_or(0);
                             let partition = metadata.partition_map.get(&uuid);
-                            println!("*********************************");
-                            println!("Found partitions: {partition:?}");
-                            println!("*********************************");
                             partitions::Topic {
                                 error_code: if topic.is_some() { 0 } else { 3 },
                                 name: Some(name),

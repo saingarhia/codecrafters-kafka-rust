@@ -71,20 +71,13 @@ impl Metadata {
 
                 match value_type {
                     12 => {
-                        let name = parser::read_compact_string(buffer)?;
-                        println!(
-                            "Feature Level Record name {i}: {:?} - {:?}",
-                            name,
-                            String::from_utf8(name.clone())
-                        );
+                        let _name = parser::read_compact_string(buffer)?;
                         let _feature_level = parser::read_short(buffer)?;
                         let tagged_field = parser::read_byte(buffer)?;
                         assert_eq!(tagged_field, 0);
                     }
                     2 => {
                         let topic_name = parser::read_compact_string(buffer)?;
-                        let _topic_name = String::from_utf8(topic_name.clone())?;
-                        println!("Topic Record name {i}: {:?} - {}", topic_name, _topic_name);
                         let topic_uuid = parser::read_u128(buffer)?;
                         topic_map
                             .entry(topic_name)
@@ -97,19 +90,16 @@ impl Metadata {
                     3 => {
                         let partition_id = parser::read_int(buffer)?;
                         let topic_uuid = parser::read_u128(buffer)?;
-                        let replica_array = parser::read_int_array(buffer)?;
-                        println!("replicas: {:?}", replica_array);
+                        let _replica_array = parser::read_int_array(buffer)?;
                         let _in_sync_replica_array = parser::read_int_array(buffer)?;
                         let _removing_replica_array = parser::read_int_array(buffer)?;
                         let _add_replica_array = parser::read_int_array(buffer)?;
                         let _leader = parser::read_int(buffer)?;
                         let _leader_epoch = parser::read_int(buffer)?;
                         let _partition_epoch = parser::read_int(buffer)?;
-                        let directory_array = parser::read_u128_array(buffer)?;
-                        println!("directories: {:?}", directory_array);
+                        let _directory_array = parser::read_u128_array(buffer)?;
                         let tagged_field = parser::read_byte(buffer)?;
                         assert_eq!(tagged_field, 0);
-                        println!("Adding topic_uuid: {topic_uuid} for partition: {partition_id}");
                         partition_map
                             .entry(topic_uuid)
                             .and_modify(|pm: &mut Vec<PartitionMetadata>| {
