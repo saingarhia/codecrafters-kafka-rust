@@ -113,7 +113,7 @@ impl Topic {
         writer::write_nullable_compact_string(resp, self.name.as_deref())?;
         writer::write_bytes(resp, &self.topic_id)?;
         // TAG BUFFER ?? todo - check
-        writer::write_bytes(resp, &self.tag_buffer)?;
+        //writer::write_bytes(resp, &self.tag_buffer)?;
         writer::write_bool(resp, self.is_internal)?;
         writer::write_varint(resp, self.partitions.len() + 1)?;
         self.partitions.iter().try_for_each(|p| p.serialize(resp))?;
@@ -135,7 +135,7 @@ impl NextCursor {
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         writer::write_compact_string(resp, &self.topic_name)?;
         writer::write_bytes(resp, &self.partition_index)?;
-        writer::write_bytes(resp, &self.tag_buffer)?; // tag buffer
+        //writer::write_bytes(resp, &self.tag_buffer)?; // tag buffer
         Ok(())
     }
 }
