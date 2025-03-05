@@ -96,7 +96,7 @@ impl Request {
                                 tag_buffer: 0,
                                 partitions: partition.map_or(vec![], |pp| {
                                     let mut ps = vec![];
-                                    for i in 0..1 {
+                                    for i in 0..2 {
                                         //p.response_partition_limit {
                                         ps.push(partitions::Partition {
                                             error_code: 0,
