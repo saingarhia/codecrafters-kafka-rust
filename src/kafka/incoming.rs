@@ -102,6 +102,7 @@ impl Request {
                                         eligible_leader_replicas: vec![],
                                         last_known_elr: vec![],
                                         offline_replicas: vec![],
+                                        tag_buffer: 0,
                                     }]
                                 }),
                                 topic_authorized_operations: 0x1234,

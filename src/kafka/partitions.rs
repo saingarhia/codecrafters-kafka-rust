@@ -62,6 +62,7 @@ pub struct Partition {
     pub eligible_leader_replicas: Vec<u32>,
     pub last_known_elr: Vec<u32>,
     pub offline_replicas: Vec<u32>,
+    pub tag_buffer: u8,
 }
 
 impl Partition {
@@ -90,6 +91,7 @@ impl Partition {
         self.offline_replicas
             .iter()
             .try_for_each(|or| writer::write_bytes(resp, or))?;
+        writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
     }
 }
@@ -118,6 +120,7 @@ impl Topic {
         writer::write_varint(resp, self.partitions.len() + 1)?;
         self.partitions.iter().try_for_each(|p| p.serialize(resp))?;
         writer::write_bytes(resp, &self.topic_authorized_operations)?;
+        // tag buffer
         writer::write_varint(resp, 0)?;
         Ok(())
     }
