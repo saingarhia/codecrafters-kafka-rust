@@ -115,6 +115,10 @@ impl Metadata {
                 assert_eq!(headers_array_count, 0);
             }
         }
+        println!("**************************");
+        println!("topic map: {topic_map:?}");
+        println!("topic map: {partition_map:?}");
+        println!("**************************");
         Ok(Metadata {
             topic_map,
             partition_map,
