@@ -12,7 +12,7 @@ const METADATA_FILENAME: &str =
 
 fn process_connection(
     mut stream: TcpStream,
-    _metadata: Arc<Mutex<kafka::metadata::Metadata>>,
+    metadata: Arc<Mutex<kafka::metadata::Metadata>>,
 ) -> kafka::errors::Result<()> {
     let mut size = [0; 4];
     let mut response = [0_u8; 1500]; // reuse
@@ -44,7 +44,7 @@ fn process_connection(
         println!("Request processor: {:?}", req_processor);
         // jump over the size field - populate it before sending on wire
         let mut writer = BufWriter::new(&mut response[4..]);
-        req_processor.process(&mut writer)?;
+        req_processor.process(&mut writer, &metadata)?;
         let message_size = writer.buffer().len() as u32;
         // we do not writer any more
         drop(writer);

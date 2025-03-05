@@ -1,7 +1,9 @@
 use super::{ErrorCodes, MAX_SUPPORTED_API_VERSION, MIN_SUPPORTED_API_VERSION};
-use crate::kafka::{apikey, body, errors, header};
+use crate::kafka::{apikey, body, errors, header, metadata, partitions};
 use std::fmt;
+use std::fs::metadata;
 use std::io::{self, Read, Write};
+use std::sync::{Arc, Mutex};
 
 // incoming request parser/handler
 //
@@ -16,7 +18,7 @@ impl fmt::Display for Request {
         write!(
             f,
             "{}",
-            format!(
+            format_args!(
                 concat!("Incoming Request:\n", "    Header: {}\n", "    Body: {}\n"),
                 self.header, self.body
             )
@@ -34,7 +36,11 @@ impl Request {
         Ok(Self { header, body })
     }
 
-    pub fn process<W: Write>(&self, response: &mut W) -> errors::Result<()> {
+    pub fn process<W: Write>(
+        &self,
+        response: &mut W,
+        metadata: &Arc<Mutex<metadata::Metadata>>,
+    ) -> errors::Result<()> {
         // fill in the correlation id
         let _ = response.write(&self.header.get_correlation_id().to_be_bytes());
 
@@ -65,38 +71,45 @@ impl Request {
                 let _ = response.write(&[0_u8]);
             }
             body::RequestBody::DescribePartitions(p) => {
+                let metadata = metadata.lock().unwrap();
                 // tag buffer is first (immediately after correlation id) as per the test
-                let _ = response.write(&[0_u8]);
-                // throttleu time in ms
-                let _ = response.write(&0_u32.to_be_bytes());
-                // topics array -> including length
-                let _ = response.write(&[p.topics.len() as u8 + 1]);
-                let ec: u16 = 0; // let ec = u16::from(ErrorCodes::UnsupportedTopicOrPartition);
-                let default_topic = [0_u8; 16]; //"00000000-0000-0000-0000-000000000000"];
-                                                //
-                p.topics.iter().for_each(|topic| {
-                    let _ = response.write(&ec.to_be_bytes());
-                    // length
-                    let _ = response.write(&[topic.len() as u8 + 1]);
-                    // topic
-                    let _ = response.write(topic);
-                    // topic ID " has to all zeros "
-                    //let _ = response.write(&default_topic.as_bytes());
-                    let _ = response.write(&default_topic);
-                    // internal topic
-                    let _ = response.write(&[0_u8; 1]);
-                });
-                // partitions array -> empty shoud be 0?
-                let _ = response.write(&[1_u8; 1]);
-                // authorized operations
-                let _ = response.write(&1234_u32.to_be_bytes());
-
-                // tag buffer
-                let _ = response.write(&[0_u8; 1]);
-                // next cursor = NULL
-                let _ = response.write(&[0xFF_u8; 1]);
-                // tag buffer
-                let _ = response.write(&[0_u8; 1]);
+                let pr = partitions::PartitionsResponse {
+                    throttle_ms: 0,
+                    topics: p
+                        .topics
+                        .iter()
+                        .map(|t| {
+                            let name = t.clone().to_vec(); //.clone();
+                            let topic = metadata.topic_map.get(&name);
+                            let uuid = topic.map(|tt| tt.uuid).unwrap_or(0);
+                            let partition = metadata.partition_map.get(&uuid);
+                            partitions::Topic {
+                                error_code: if topic.is_some() { 0 } else { 3 },
+                                name: Some(name),
+                                topic_id: uuid,
+                                is_internal: false,
+                                tag_buffer: 0,
+                                partitions: partition.map_or(vec![], |pp| {
+                                    vec![partitions::Partition {
+                                        error_code: 0,
+                                        partition_index: pp.partition_id as u32,
+                                        leader_id: 0,
+                                        leader_epoch: 0,
+                                        replica_nodes: vec![],
+                                        isr_nodes: vec![],
+                                        eligible_leader_replicas: vec![],
+                                        last_known_elr: vec![],
+                                        offline_replicas: vec![],
+                                    }]
+                                }),
+                                topic_authorized_operations: 0x1234,
+                            }
+                        })
+                        .collect(),
+                    next_cursor: None,
+                    tag_buffer: 0,
+                };
+                pr.serialize(response)?;
             }
         }
         Ok(())

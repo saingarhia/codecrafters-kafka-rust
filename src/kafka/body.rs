@@ -6,7 +6,7 @@ use std::io::Read;
 #[derive(Debug, Clone)]
 pub enum RequestBody {
     ApiVersions(u32, u8), // throttle_ms and tagged buffer etc
-    DescribePartitions(partitions::Partitions),
+    DescribePartitions(partitions::PartitionsRequest),
     Fetch(String),
 }
 
@@ -16,8 +16,7 @@ impl RequestBody {
             apikey::ApiKey::Fetch => RequestBody::Fetch("not implemented".into()),
             apikey::ApiKey::ApiVersions => RequestBody::ApiVersions(0, 0),
             apikey::ApiKey::DescribeTopicPartitions => {
-                let p = RequestBody::DescribePartitions(partitions::Partitions::new(req)?);
-                p
+                RequestBody::DescribePartitions(partitions::PartitionsRequest::new(req)?)
             }
         };
         Ok(s)

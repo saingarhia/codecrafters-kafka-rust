@@ -20,7 +20,7 @@ pub struct PartitionMetadata {
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Metadata {
-    pub topic_map: HashMap<String, TopicMetadata>,
+    pub topic_map: HashMap<Vec<u8>, TopicMetadata>,
     pub partition_map: HashMap<u128, PartitionMetadata>,
 }
 
@@ -79,7 +79,7 @@ impl Metadata {
                     }
                     2 => {
                         let topic_name = parser::read_compact_string(buffer)?;
-                        let topic_name = String::from_utf8(topic_name)?;
+                        //let topic_name = String::from_utf8(topic_name)?;
                         println!("Topic Record name {i}: {:?}", topic_name);
                         let topic_uuid = parser::read_u128(buffer)?;
                         topic_map
