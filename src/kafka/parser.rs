@@ -28,7 +28,7 @@ pub fn array<R: Read>(req: &mut R) -> errors::Result<Vec<Vec<u8>>> {
     let mut result = vec![];
     for _i in 0..length[0] - 1 {
         result.push(read_compact_string(req)?);
-        //tag_buffer(req)?;
+        tag_buffer(req)?;
     }
     Ok(result)
 }
