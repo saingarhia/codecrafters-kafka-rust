@@ -21,7 +21,7 @@ pub struct PartitionMetadata {
 #[derive(Debug, Clone)]
 pub struct Metadata {
     pub topic_map: HashMap<Vec<u8>, TopicMetadata>,
-    pub partition_map: HashMap<u128, PartitionMetadata>,
+    pub partition_map: HashMap<u128, Vec<PartitionMetadata>>,
 }
 
 impl Metadata {
@@ -112,7 +112,10 @@ impl Metadata {
                         println!("Adding topic_uuid: {topic_uuid} for partition: {partition_id}");
                         partition_map
                             .entry(topic_uuid)
-                            .or_insert(PartitionMetadata { partition_id });
+                            .and_modify(|pm: &mut Vec<PartitionMetadata>| {
+                                pm.push(PartitionMetadata { partition_id })
+                            })
+                            .or_insert(vec![PartitionMetadata { partition_id }]);
                     }
                     _ => unimplemented!(),
                 }

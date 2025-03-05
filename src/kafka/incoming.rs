@@ -100,16 +100,19 @@ impl Request {
                                 partitions: partition.map_or(vec![], |pp| {
                                     let mut ps = vec![];
                                     let pps_to_include = if topic_idx == topics_length - 1 {
-                                        1
+                                        pp.len()
                                     } else {
-                                        p.response_partition_limit - partitions_included
+                                        pp.len().min(
+                                            p.response_partition_limit as usize
+                                                - partitions_included,
+                                        )
                                     };
                                     partitions_included += pps_to_include;
                                     for i in 0..pps_to_include {
                                         //p.response_partition_limit {
                                         ps.push(partitions::Partition {
                                             error_code: 0,
-                                            partition_index: pp.partition_id as u32 + i as u32,
+                                            partition_index: pp[i].partition_id as u32 + i as u32,
                                             leader_id: 0,
                                             leader_epoch: 0,
                                             replica_nodes: vec![],
