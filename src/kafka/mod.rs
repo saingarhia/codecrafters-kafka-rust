@@ -7,6 +7,7 @@ pub mod incoming;
 pub mod metadata;
 pub mod parser;
 pub mod partitions;
+pub mod records;
 pub mod writer;
 
 // supports version 0 through 4

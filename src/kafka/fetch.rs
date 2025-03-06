@@ -2,6 +2,8 @@ use crate::kafka::{errors, metadata, parser, writer};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 
+use super::records;
+
 const FETCH_RESPONSE_UNKNOWN_TOPIC: u16 = 100;
 
 #[allow(dead_code)]
@@ -224,7 +226,7 @@ struct FetchResponsePartition {
     log_start_offset: u64,
     aborted_transactions: Vec<FetchResponseAbortedTransaction>,
     preferred_read_replica: u32,
-    records: Vec<u8>,
+    records: Vec<records::RecordsBatch>,
     tag_buffer: u8,
 }
 
@@ -234,7 +236,7 @@ impl FetchResponsePartition {
         Self {
             aborted_transactions,
             error_code: 0, //FETCH_RESPONSE_UNKNOWN_TOPIC,
-            records: vec![0, 1, 2, 3],
+            records: vec![records::RecordsBatch::new()],
             ..Default::default()
         }
     }
@@ -259,7 +261,9 @@ impl FetchResponsePartition {
             .iter()
             .try_for_each(|t| t.serialize(resp))?;
         writer::write_bytes(resp, &self.preferred_read_replica)?;
-        writer::write_compact_record(resp, &self.records)?;
+
+        writer::write_bytes(resp, &(self.records.len() as u8 + 1))?;
+        self.records.iter().try_for_each(|t| t.serialize(resp))?;
         println!("partition tag buffer writing now!! ***********");
         writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())

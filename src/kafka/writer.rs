@@ -66,13 +66,6 @@ pub fn write_compact_string<W: Write>(resp: &mut W, s: &[u8]) -> errors::Result<
     Ok(())
 }
 
-pub fn write_compact_record<W: Write>(resp: &mut W, s: &[u8]) -> errors::Result<()> {
-    let len = s.len() as u16 + 1;
-    write_bytes(resp, &len)?;
-    resp.write_all(s)?;
-    Ok(())
-}
-
 pub fn write_nullable_compact_string<W: Write>(
     resp: &mut W,
     val: Option<&[u8]>,
