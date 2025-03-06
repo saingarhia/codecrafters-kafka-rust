@@ -67,7 +67,7 @@ pub fn write_compact_string<W: Write>(resp: &mut W, s: &[u8]) -> errors::Result<
 }
 
 pub fn write_compact_record<W: Write>(resp: &mut W, s: &[u8]) -> errors::Result<()> {
-    let len = resp.len() as u16 + 1;
+    let len = s.len() as u16 + 1;
     write_bytes(resp, &len)?;
     resp.write_all(s)?;
     Ok(())

@@ -311,14 +311,14 @@ pub(crate) struct FetchResponse {
     throttle_time_ms: u32,
     error_code: u16,
     session_id: u32,
-    responses: Vec<FetchResponseTopic]>,
+    responses: Vec<FetchResponseTopic>,
     tag_buffer: u8,
 }
 
 impl FetchResponse {
     pub fn new(req: &FetchRequest, metadata: &Arc<Mutex<metadata::Metadata>>) -> Self {
         let responses = req.topics.iter().fold(vec![], |mut acc, t| {
-            acc.push(FetchResponseInternal::new(t, metadata));
+            acc.push(FetchResponseTopic::new(t, metadata));
             acc
         });
         Self {
