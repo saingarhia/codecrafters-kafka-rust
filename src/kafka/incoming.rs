@@ -49,6 +49,7 @@ impl Request {
         match &self.body {
             body::RequestBody::Fetch(fetcher) => {
                 println!("request as received: {:?}", fetcher);
+                writer::write_bytes(response, &0_u8)?;
                 let fetch_resp = fetch::FetchResponse::new(fetcher);
                 fetch_resp.serialize(response)?;
             }
