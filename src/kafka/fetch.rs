@@ -335,6 +335,7 @@ impl FetchResponse {
         writer::write_bytes(resp, &(self.responses.len() as u8 + 1))?;
         self.responses.iter().try_for_each(|r| r.serialize(resp))?;
         writer::write_bytes(resp, &self.tag_buffer)?;
+        writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
     }
 }
