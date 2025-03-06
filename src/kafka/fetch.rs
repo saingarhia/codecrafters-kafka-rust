@@ -160,20 +160,27 @@ impl FetchRequest {
         let session_id = parser::read_int(req)? as u32;
         let session_epoch = parser::read_int(req)? as u32;
 
+        println!("session epoch: {session_epoch}");
         let num_topics = parser::read_byte(req)? as u8;
+        println!("num_topics: {num_topics}");
         let mut topics = vec![];
         for _i in 0..num_topics {
             let p = FetchTopic::new(req)?;
+            println!("new topic extracted: {p:?}");
             topics.push(p);
         }
         let num_forgotten_topics = parser::read_byte(req)? as u8;
+        println!("num_forgotten_topics: {num_forgotten_topics}");
         let mut forgotten_topics_data = vec![];
         for _i in 0..num_forgotten_topics {
             let p = FetchRequestForgottenTopic::new(req)?;
             forgotten_topics_data.push(p);
         }
+        println!("Done with all the forgotten_topics_data");
         let rack_id = parser::read_compact_string(req)?;
+        println!("rack_id: {rack_id:?}");
         let tag_buffer = parser::read_byte(req)? as u8;
+        println!("tag buffer: {tag_buffer}");
 
         Ok(Self {
             max_wait_ms,
