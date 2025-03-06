@@ -164,7 +164,7 @@ impl FetchRequest {
         let num_topics = parser::read_byte(req)? as u8;
         println!("num_topics: {num_topics}");
         let mut topics = vec![];
-        for _i in 0..num_topics {
+        for _i in 0..num_topics - 1 {
             let p = FetchTopic::new(req)?;
             println!("new topic extracted: {p:?}");
             topics.push(p);
@@ -172,7 +172,7 @@ impl FetchRequest {
         let num_forgotten_topics = parser::read_byte(req)? as u8;
         println!("num_forgotten_topics: {num_forgotten_topics}");
         let mut forgotten_topics_data = vec![];
-        for _i in 0..num_forgotten_topics {
+        for _i in 0..num_forgotten_topics - 1 {
             let p = FetchRequestForgottenTopic::new(req)?;
             forgotten_topics_data.push(p);
         }
