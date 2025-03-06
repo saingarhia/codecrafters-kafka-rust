@@ -260,6 +260,7 @@ impl FetchResponsePartition {
             .try_for_each(|t| t.serialize(resp))?;
         writer::write_bytes(resp, &self.preferred_read_replica)?;
         writer::write_compact_string(resp, &self.records)?;
+        println!("partition tag buffer writing now!! ***********");
         writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
     }
@@ -298,6 +299,7 @@ impl FetchResponseInternal {
         writer::write_bytes(resp, &self.topic_id)?;
         writer::write_bytes(resp, &(self.partitions.len() as u8 + 1))?;
         self.partitions.iter().try_for_each(|p| p.serialize(resp))?;
+        println!("topic responses tag buffer ***********");
         writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
     }
@@ -334,7 +336,7 @@ impl FetchResponse {
         writer::write_bytes(resp, &self.session_id)?;
         writer::write_bytes(resp, &(self.responses.len() as u8 + 1))?;
         self.responses.iter().try_for_each(|r| r.serialize(resp))?;
-        writer::write_bytes(resp, &self.tag_buffer)?;
+        println!("response body tag buffer ***********");
         writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
     }
