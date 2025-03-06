@@ -259,7 +259,7 @@ impl FetchResponsePartition {
             .iter()
             .try_for_each(|t| t.serialize(resp))?;
         writer::write_bytes(resp, &self.preferred_read_replica)?;
-        writer::write_compact_string(resp, &self.records)?;
+        writer::write_compact_record(resp, &self.records)?;
         println!("partition tag buffer writing now!! ***********");
         writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
@@ -268,13 +268,13 @@ impl FetchResponsePartition {
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
-struct FetchResponseInternal {
+struct FetchResponseTopic {
     topic_id: u128,
     partitions: Vec<FetchResponsePartition>,
     tag_buffer: u8,
 }
 
-impl FetchResponseInternal {
+impl FetchResponseTopic {
     pub fn new(topic: &FetchTopic, metadata: &Arc<Mutex<metadata::Metadata>>) -> Self {
         let metadata = metadata.lock().unwrap();
         let pp_meta = metadata.partition_map.get(&topic.topic_id);
@@ -311,7 +311,7 @@ pub(crate) struct FetchResponse {
     throttle_time_ms: u32,
     error_code: u16,
     session_id: u32,
-    responses: Vec<FetchResponseInternal>,
+    responses: Vec<FetchResponseTopic]>,
     tag_buffer: u8,
 }
 
