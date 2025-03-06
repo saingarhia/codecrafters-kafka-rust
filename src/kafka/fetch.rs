@@ -287,7 +287,7 @@ impl FetchResponseInternal {
 
     fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         writer::write_bytes(resp, &self.topic_id)?;
-        writer::write_bytes(resp, &(self.partitions.len() as u8))?;
+        writer::write_bytes(resp, &(self.partitions.len() as u8 + 1))?;
         self.partitions.iter().try_for_each(|p| p.serialize(resp))?;
         writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
@@ -323,7 +323,7 @@ impl FetchResponse {
         writer::write_bytes(resp, &self.throttle_time_ms)?;
         writer::write_bytes(resp, &self.error_code)?;
         writer::write_bytes(resp, &self.session_id)?;
-        writer::write_bytes(resp, &(self.responses.len() as u8))?;
+        writer::write_bytes(resp, &(self.responses.len() as u8 + 1))?;
         self.responses.iter().try_for_each(|r| r.serialize(resp))?;
         writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
