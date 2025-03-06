@@ -1,5 +1,6 @@
-use crate::kafka::{errors, parser, writer};
+use crate::kafka::{errors, metadata, parser, writer};
 use std::io::{Read, Write};
+use std::sync::{Arc, Mutex};
 
 const FETCH_RESPONSE_UNKNOWN_TOPIC: u16 = 100;
 
@@ -247,6 +248,15 @@ impl FetchResponsePartition {
         }
     }
 
+    fn new_with_error(ec: u16) -> Self {
+        let aborted_transactions = vec![];
+        Self {
+            aborted_transactions,
+            error_code: ec,
+            ..Default::default()
+        }
+    }
+
     fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         writer::write_bytes(resp, &self.partiton_index)?;
         writer::write_bytes(resp, &self.error_code)?;
@@ -273,9 +283,17 @@ struct FetchResponseInternal {
 }
 
 impl FetchResponseInternal {
-    pub fn new(topic: &FetchTopic) -> Self {
+    pub fn new(topic: &FetchTopic, metadata: &Arc<Mutex<metadata::Metadata>>) -> Self {
+        let metadata = metadata.lock().unwrap();
+        let pp_meta = metadata.partition_map.get(&topic.topic_id);
         let partitions = topic.partitions.iter().fold(vec![], |mut acc, part| {
-            acc.push(FetchResponsePartition::new(part));
+            if pp_meta.is_none() {
+                acc.push(FetchResponsePartition::new_with_error(
+                    FETCH_RESPONSE_UNKNOWN_TOPIC,
+                ));
+            } else {
+                acc.push(FetchResponsePartition::new(part));
+            }
             acc
         });
         Self {
@@ -305,9 +323,9 @@ pub(crate) struct FetchResponse {
 }
 
 impl FetchResponse {
-    pub fn new(req: &FetchRequest) -> Self {
+    pub fn new(req: &FetchRequest, metadata: &Arc<Mutex<metadata::Metadata>>) -> Self {
         let responses = req.topics.iter().fold(vec![], |mut acc, t| {
-            acc.push(FetchResponseInternal::new(t));
+            acc.push(FetchResponseInternal::new(t, metadata));
             acc
         });
         Self {
