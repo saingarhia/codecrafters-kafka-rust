@@ -72,6 +72,7 @@ impl Metadata {
                 match value_type {
                     12 => {
                         let _name = parser::read_compact_string(buffer)?;
+                        println!("read name: {}", String::from_utf8(_name.clone()).unwrap());
                         let _feature_level = parser::read_short(buffer)?;
                         let tagged_field = parser::read_byte(buffer)?;
                         assert_eq!(tagged_field, 0);

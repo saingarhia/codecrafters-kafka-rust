@@ -102,7 +102,6 @@ fn decode_nullable_string<R: Read>(req: &mut R) -> errors::Result<Option<String>
 pub fn read_int_array<R: Read>(req: &mut R) -> errors::Result<Vec<i32>> {
     let num = read_byte(req)? as usize - 1; // number of elements in the array
     (0..num)
-        .into_iter()
         .map(|_| read_int(req))
         .collect::<errors::Result<_>>()
 }
@@ -110,7 +109,6 @@ pub fn read_int_array<R: Read>(req: &mut R) -> errors::Result<Vec<i32>> {
 pub fn read_u128_array<R: Read>(req: &mut R) -> errors::Result<Vec<u128>> {
     let num = read_byte(req)? as usize - 1; // number of elements in the array
     (0..num)
-        .into_iter()
         .map(|_| read_u128(req))
         .collect::<errors::Result<_>>()
 }
