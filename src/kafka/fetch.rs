@@ -1,6 +1,8 @@
 use crate::kafka::{errors, parser, writer};
 use std::io::{Read, Write};
 
+const FETCH_RESPONSE_UNKNOWN_TOPIC: u16 = 100;
+
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct FetchRequestForgottenTopic {
@@ -151,41 +153,39 @@ impl std::fmt::Display for FetchRequest {
 }
 impl FetchRequest {
     pub fn new<R: Read>(req: &mut R) -> errors::Result<Self> {
-        /*
-                let max_wait_ms = parser::read_int(req)? as u32;
-                let min_bytes = parser::read_int(req)? as u32;
-                let max_bytes = parser::read_int(req)? as u32;
-                let isolation_level = parser::read_byte(req)? as u8;
-                let session_id = parser::read_int(req)? as u32;
-                let session_epoch = parser::read_int(req)? as u32;
+        let max_wait_ms = parser::read_int(req)? as u32;
+        let min_bytes = parser::read_int(req)? as u32;
+        let max_bytes = parser::read_int(req)? as u32;
+        let isolation_level = parser::read_byte(req)? as u8;
+        let session_id = parser::read_int(req)? as u32;
+        let session_epoch = parser::read_int(req)? as u32;
 
-                let num_topics = parser::read_byte(req)? as u8;
-                let mut topics = vec![];
-                for _i in 0..num_topics {
-                    let p = FetchTopic::new(req)?;
-                    topics.push(p);
-                }
-                let num_forgotten_topics = parser::read_byte(req)? as u8;
-                let mut forgotten_topics_data = vec![];
-                for _i in 0..num_forgotten_topics {
-                    let p = FetchRequestForgottenTopic::new(req)?;
-                    forgotten_topics_data.push(p);
-                }
-                let rack_id = parser::read_compact_string(req)?;
-                let tag_buffer = parser::read_byte(req)? as u8;
-        */
+        let num_topics = parser::read_byte(req)? as u8;
+        let mut topics = vec![];
+        for _i in 0..num_topics {
+            let p = FetchTopic::new(req)?;
+            topics.push(p);
+        }
+        let num_forgotten_topics = parser::read_byte(req)? as u8;
+        let mut forgotten_topics_data = vec![];
+        for _i in 0..num_forgotten_topics {
+            let p = FetchRequestForgottenTopic::new(req)?;
+            forgotten_topics_data.push(p);
+        }
+        let rack_id = parser::read_compact_string(req)?;
+        let tag_buffer = parser::read_byte(req)? as u8;
 
         Ok(Self {
-            max_wait_ms: 0,
-            min_bytes: 0,
-            max_bytes: 0,
-            isolation_level: 0,
-            session_id: 0,
-            session_epoch: 0,
-            topics: vec![],
-            forgotten_topics_data: vec![],
-            rack_id: vec![],
-            tag_buffer: 0,
+            max_wait_ms,
+            min_bytes,
+            max_bytes,
+            isolation_level,
+            session_id,
+            session_epoch,
+            topics,
+            forgotten_topics_data,
+            rack_id,
+            tag_buffer,
         })
     }
 }
@@ -228,10 +228,11 @@ struct FetchResponsePartition {
 }
 
 impl FetchResponsePartition {
-    fn new(_req: &FetchRequest) -> Self {
+    fn new(_part: &FetchPartition) -> Self {
         let aborted_transactions = vec![];
         Self {
             aborted_transactions,
+            error_code: FETCH_RESPONSE_UNKNOWN_TOPIC,
             ..Default::default()
         }
     }
@@ -262,11 +263,15 @@ struct FetchResponseInternal {
 }
 
 impl FetchResponseInternal {
-    pub fn new(req: &FetchRequest) -> Self {
+    pub fn new(topic: &FetchTopic) -> Self {
+        let partitions = topic.partitions.iter().fold(vec![], |mut acc, part| {
+            acc.push(FetchResponsePartition::new(part));
+            acc
+        });
         Self {
-            topic_id: 0,
-            partitions: vec![FetchResponsePartition::new(req)],
-            tag_buffer: 0,
+            topic_id: topic.topic_id,
+            partitions,
+            tag_buffer: topic.tag_buffer,
         }
     }
 
@@ -291,12 +296,16 @@ pub(crate) struct FetchResponse {
 
 impl FetchResponse {
     pub fn new(req: &FetchRequest) -> Self {
+        let responses = req.topics.iter().fold(vec![], |mut acc, t| {
+            acc.push(FetchResponseInternal::new(t));
+            acc
+        });
         Self {
             throttle_time_ms: 0,
             error_code: 0,
-            session_id: 0,
-            responses: vec![FetchResponseInternal::new(req)],
-            tag_buffer: 0,
+            session_id: req.session_id,
+            responses,
+            tag_buffer: req.tag_buffer,
         }
     }
 
@@ -305,7 +314,7 @@ impl FetchResponse {
         writer::write_bytes(resp, &self.error_code)?;
         writer::write_bytes(resp, &self.session_id)?;
         writer::write_bytes(resp, &(self.responses.len() as u8))?;
-        //self.responses.iter().try_for_each(|r| r.serialize(resp))?;
+        self.responses.iter().try_for_each(|r| r.serialize(resp))?;
         writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
     }
