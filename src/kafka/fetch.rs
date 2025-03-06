@@ -242,7 +242,7 @@ impl FetchResponsePartition {
         let aborted_transactions = vec![];
         Self {
             aborted_transactions,
-            error_code: FETCH_RESPONSE_UNKNOWN_TOPIC,
+            error_code: 0, //FETCH_RESPONSE_UNKNOWN_TOPIC,
             ..Default::default()
         }
     }
