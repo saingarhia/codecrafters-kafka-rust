@@ -1,5 +1,5 @@
 use super::{ErrorCodes, MAX_SUPPORTED_API_VERSION, MIN_SUPPORTED_API_VERSION};
-use crate::kafka::{apikey, body, errors, header, metadata, partitions, writer};
+use crate::kafka::{apikey, body, errors, fetch, header, metadata, partitions, writer};
 use std::fmt;
 use std::fs::metadata;
 use std::io::{self, Read, Write};
@@ -47,7 +47,11 @@ impl Request {
         println!("Building response for Request: {}", self);
         let api_ver = self.header.get_api_ver();
         match &self.body {
-            body::RequestBody::Fetch(_s) => {}
+            body::RequestBody::Fetch(fetcher) => {
+                println!("request as received: {:?}", fetcher);
+                let fetch_resp = fetch::FetchResponse {};
+                fetch_resp.serialize(response)?;
+            }
             body::RequestBody::ApiVersions(_throttle, _tbuf) => {
                 if api_ver < super::MIN_SUPPORTED_API_VERSION || api_ver > MAX_SUPPORTED_API_VERSION
                 {

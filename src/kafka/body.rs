@@ -1,5 +1,5 @@
 // implements Kafka body
-use crate::kafka::{apikey, errors, header, partitions};
+use crate::kafka::{apikey, errors, fetch, header, partitions};
 use std::fmt;
 use std::io::Read;
 
@@ -7,13 +7,13 @@ use std::io::Read;
 pub enum RequestBody {
     ApiVersions(u32, u8), // throttle_ms and tagged buffer etc
     DescribePartitions(partitions::PartitionsRequest),
-    Fetch(String),
+    Fetch(fetch::FetchRequest),
 }
 
 impl RequestBody {
     pub fn new<R: Read>(req: &mut R, t: &header::RequestHeader) -> errors::Result<Self> {
         let s = match t.get_api_key() {
-            apikey::ApiKey::Fetch => RequestBody::Fetch("not implemented".into()),
+            apikey::ApiKey::Fetch => RequestBody::Fetch(fetch::FetchRequest::new(req)?),
             apikey::ApiKey::ApiVersions => RequestBody::ApiVersions(0, 0),
             apikey::ApiKey::DescribeTopicPartitions => {
                 RequestBody::DescribePartitions(partitions::PartitionsRequest::new(req)?)

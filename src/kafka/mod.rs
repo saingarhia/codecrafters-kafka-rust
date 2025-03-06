@@ -1,6 +1,7 @@
 pub mod apikey;
 pub mod body;
 pub mod errors;
+pub mod fetch;
 pub mod header;
 pub mod incoming;
 pub mod metadata;
