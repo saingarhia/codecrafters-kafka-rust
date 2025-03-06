@@ -49,7 +49,7 @@ impl Request {
         match &self.body {
             body::RequestBody::Fetch(fetcher) => {
                 println!("request as received: {:?}", fetcher);
-                let fetch_resp = fetch::FetchResponse {};
+                let fetch_resp = fetch::FetchResponse::new(fetcher);
                 fetch_resp.serialize(response)?;
             }
             body::RequestBody::ApiVersions(_throttle, _tbuf) => {

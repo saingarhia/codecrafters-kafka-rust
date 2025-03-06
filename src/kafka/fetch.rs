@@ -3,21 +3,59 @@ use std::io::{Read, Write};
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub(crate) struct FetchPartition {
+struct FetchRequestForgottenTopic {
+    topic_id: u128,
+    partitions: Vec<u32>,
+    tag_buffer: u8,
+}
+impl FetchRequestForgottenTopic {
+    fn new<R: Read>(req: &mut R) -> errors::Result<Self> {
+        let topic_id = parser::read_u128(req)?;
+        let num_partitions = parser::read_byte(req)? as u8;
+        let mut partitions = vec![];
+        for _i in 0..num_partitions {
+            let p = parser::read_int(req)? as u32;
+            partitions.push(p);
+        }
+        let tag_buffer = parser::read_byte(req)? as u8;
+        Ok(Self {
+            topic_id,
+            partitions,
+            tag_buffer,
+        })
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+struct FetchPartition {
     partition: u32,
+    current_leader_epoch: u32,
     fetch_offset: u64,
+    last_fetched_epoch: u32,
+    log_start_offset: u64,
     partition_max_bytes: u32,
+    tag_buffer: u8,
 }
 
 impl FetchPartition {
     fn new<R: Read>(req: &mut R) -> errors::Result<Self> {
         let partition = parser::read_int(req)? as u32;
+        let current_leader_epoch = parser::read_int(req)? as u32;
         let fetch_offset = parser::read_u64(req)?;
+        let last_fetched_epoch = parser::read_int(req)? as u32;
+        let log_start_offset = parser::read_u64(req)?;
         let partition_max_bytes = parser::read_int(req)? as u32;
+        let tag_buffer = parser::read_byte(req)? as u8;
+
         Ok(Self {
             partition,
+            current_leader_epoch,
             fetch_offset,
+            last_fetched_epoch,
+            log_start_offset,
             partition_max_bytes,
+            tag_buffer,
         })
     }
 }
@@ -35,16 +73,22 @@ impl std::fmt::Display for FetchPartition {
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) struct FetchTopic {
-    topic: Vec<u8>,
+    topic_id: u128,
     partitions: Vec<FetchPartition>,
+    tag_buffer: u8,
 }
 
 impl std::fmt::Display for FetchTopic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output = String::new();
-        let topic_name =
-            String::from_utf8(self.topic.clone()).expect("expected proper topic name!");
-        let _ = std::fmt::write(&mut output, format_args!("topic: {}, ", topic_name));
+        let _ = std::fmt::write(
+            &mut output,
+            format_args!(
+                "topic: {}, partitions: {}",
+                self.topic_id,
+                self.partitions.len()
+            ),
+        );
         self.partitions.iter().for_each(|p| {
             let _ = std::fmt::write(&mut output, format_args!("Partition info: {}", p));
         });
@@ -54,26 +98,39 @@ impl std::fmt::Display for FetchTopic {
 
 impl FetchTopic {
     fn new<R: Read>(req: &mut R) -> errors::Result<Self> {
-        let topic = parser::read_compact_string(req)?;
+        let topic_id = parser::read_u128(req)?;
         let num_partitions = parser::read_byte(req)? as u8;
         let mut partitions = vec![];
         for _i in 0..num_partitions {
             let p = FetchPartition::new(req)?;
             partitions.push(p);
         }
-        Ok(Self { topic, partitions })
+        // tag buffer
+        let tag_buffer = parser::read_byte(req)? as u8;
+        Ok(Self {
+            topic_id,
+            partitions,
+            tag_buffer,
+        })
     }
 }
 
 impl FetchTopic {}
 
+// Version 16
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) struct FetchRequest {
-    replica_id: u32,
     max_wait_ms: u32,
     min_bytes: u32,
+    max_bytes: u32,
+    isolation_level: u8,
+    session_id: u32,
+    session_epoch: u32,
     topics: Vec<FetchTopic>,
+    forgotten_topics_data: Vec<FetchRequestForgottenTopic>,
+    rack_id: Vec<u8>,
+    tag_buffer: u8,
 }
 
 impl std::fmt::Display for FetchRequest {
@@ -82,8 +139,8 @@ impl std::fmt::Display for FetchRequest {
         let _ = std::fmt::write(
             &mut output,
             format_args!(
-                "Fetch Request: \nreplica id: {}, max_wait_ms: {}, min_bytes: {}, topics: \n",
-                self.replica_id, self.max_wait_ms, self.min_bytes
+                "Fetch Request: \nsession id: {}, max_wait_ms: {}, min_bytes: {}, topics: \n",
+                self.session_id, self.max_wait_ms, self.min_bytes
             ),
         );
         self.topics.iter().for_each(|t| {
@@ -94,30 +151,160 @@ impl std::fmt::Display for FetchRequest {
 }
 impl FetchRequest {
     pub fn new<R: Read>(req: &mut R) -> errors::Result<Self> {
-        let replica_id = parser::read_int(req)? as u32;
         let max_wait_ms = parser::read_int(req)? as u32;
         let min_bytes = parser::read_int(req)? as u32;
+        let max_bytes = parser::read_int(req)? as u32;
+        let isolation_level = parser::read_byte(req)? as u8;
+        let session_id = parser::read_int(req)? as u32;
+        let session_epoch = parser::read_int(req)? as u32;
+
         let num_topics = parser::read_byte(req)? as u8;
         let mut topics = vec![];
         for _i in 0..num_topics {
             let p = FetchTopic::new(req)?;
             topics.push(p);
         }
+        let num_forgotten_topics = parser::read_byte(req)? as u8;
+        let mut forgotten_topics_data = vec![];
+        for _i in 0..num_forgotten_topics {
+            let p = FetchRequestForgottenTopic::new(req)?;
+            forgotten_topics_data.push(p);
+        }
+        let rack_id = parser::read_compact_string(req)?;
+        let tag_buffer = parser::read_byte(req)? as u8;
+
         Ok(Self {
-            replica_id,
             max_wait_ms,
             min_bytes,
+            max_bytes,
+            isolation_level,
+            session_id,
+            session_epoch,
             topics,
+            forgotten_topics_data,
+            rack_id,
+            tag_buffer,
         })
     }
 }
 
 #[allow(dead_code)]
+#[derive(Debug, Clone, Default)]
+struct FetchResponseAbortedTransaction {
+    producer_id: u64,
+    first_offset: u64,
+    tag_buffer: u8,
+}
+
+impl FetchResponseAbortedTransaction {
+    fn new(_req: &FetchRequest) -> Self {
+        Self {
+            ..Default::default()
+        }
+    }
+
+    fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
+        writer::write_bytes(resp, &self.producer_id)?;
+        writer::write_bytes(resp, &self.first_offset)?;
+        writer::write_bytes(resp, &self.tag_buffer)?;
+        Ok(())
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Default)]
+struct FetchResponsePartition {
+    partiton_index: u32,
+    error_code: u16,
+    high_watermark: u64,
+    last_stable_offset: u64,
+    log_start_offset: u64,
+    aborted_transactions: Vec<FetchResponseAbortedTransaction>,
+    preferred_read_replica: u32,
+    records: Vec<u8>,
+    tag_buffer: u8,
+}
+
+impl FetchResponsePartition {
+    fn new(_req: &FetchRequest) -> Self {
+        let aborted_transactions = vec![];
+        Self {
+            aborted_transactions,
+            ..Default::default()
+        }
+    }
+
+    fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
+        writer::write_bytes(resp, &self.partiton_index)?;
+        writer::write_bytes(resp, &self.error_code)?;
+        writer::write_bytes(resp, &self.high_watermark)?;
+        writer::write_bytes(resp, &self.last_stable_offset)?;
+        writer::write_bytes(resp, &self.log_start_offset)?;
+        writer::write_bytes(resp, &(self.aborted_transactions.len() as u8 + 1))?;
+        self.aborted_transactions
+            .iter()
+            .try_for_each(|t| t.serialize(resp))?;
+        writer::write_bytes(resp, &self.preferred_read_replica)?;
+        writer::write_compact_string(resp, &self.records)?;
+        writer::write_bytes(resp, &self.tag_buffer)?;
+        Ok(())
+    }
+}
+
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub(crate) struct FetchResponse {}
+struct FetchResponseInternal {
+    topic_id: u128,
+    partitions: Vec<FetchResponsePartition>,
+    tag_buffer: u8,
+}
+
+impl FetchResponseInternal {
+    pub fn new(req: &FetchRequest) -> Self {
+        Self {
+            topic_id: 0,
+            partitions: vec![FetchResponsePartition::new(req)],
+            tag_buffer: 0,
+        }
+    }
+
+    fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
+        writer::write_bytes(resp, &self.topic_id)?;
+        writer::write_bytes(resp, &(self.partitions.len() as u8))?;
+        self.partitions.iter().try_for_each(|p| p.serialize(resp))?;
+        writer::write_bytes(resp, &self.tag_buffer)?;
+        Ok(())
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub(crate) struct FetchResponse {
+    throttle_time_ms: u32,
+    error_code: u16,
+    session_id: u32,
+    responses: Vec<FetchResponseInternal>,
+    tag_buffer: u8,
+}
 
 impl FetchResponse {
-    pub fn serialize<W: Write>(&self, _resp: &W) -> errors::Result<()> {
+    pub fn new(req: &FetchRequest) -> Self {
+        Self {
+            throttle_time_ms: 0,
+            error_code: 0,
+            session_id: 0,
+            responses: vec![FetchResponseInternal::new(req)],
+            tag_buffer: 0,
+        }
+    }
+
+    pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
+        writer::write_bytes(resp, &self.throttle_time_ms)?;
+        writer::write_bytes(resp, &self.error_code)?;
+        writer::write_bytes(resp, &self.session_id)?;
+        writer::write_bytes(resp, &(self.responses.len() as u8 + 1))?;
+        self.responses.iter().try_for_each(|r| r.serialize(resp))?;
+        writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
     }
 }
