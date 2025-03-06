@@ -101,10 +101,13 @@ impl std::fmt::Display for FetchTopic {
 impl FetchTopic {
     fn new<R: Read>(req: &mut R) -> errors::Result<Self> {
         let topic_id = parser::read_u128(req)?;
+        println!("topic id: {topic_id}");
         let num_partitions = parser::read_byte(req)? as u8;
         let mut partitions = vec![];
-        for _i in 0..num_partitions {
+        println!("num partitions: {num_partitions}");
+        for _i in 0..num_partitions - 1 {
             let p = FetchPartition::new(req)?;
+            println!("new partition: {p:?}");
             partitions.push(p);
         }
         // tag buffer
