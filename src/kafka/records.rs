@@ -22,6 +22,7 @@ pub(crate) struct RecordsBatch {
 impl RecordsBatch {
     pub fn new() -> Self {
         Self {
+            records: vec![],
             ..Default::default()
         }
     }
