@@ -73,7 +73,10 @@ impl KafkaRecord {
 
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         writer::write_bytes(resp, &self.length)?;
-        println!("-------- now writing attributes: {self.attributes} ----------");
+        println!(
+            "-------- now writing attributes: {0} ----------",
+            self.attributes
+        );
         writer::write_bytes(resp, &self.attributes)?;
         println!("-------- now writing timestamp  ----------");
         writer::write_bytes(resp, &self.timestamp_delta)?;
