@@ -71,6 +71,7 @@ impl KafkaRecord {
         Self {
             length: 0,
             attributes: 0x44,
+            offset_delta: 11,
             key: "record-key".into(),
             value: "record-value".into(),
             headers: vec![KafkaRecordHeader::new()],
