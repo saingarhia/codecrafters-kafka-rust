@@ -64,12 +64,23 @@ pub fn write_varint_main<W: Write>(resp: &mut W, x: i32) -> errors::Result<()> {
     write_bytes(resp, &(ux as u8))
 }
 
+pub fn write_uvarint<W: Write>(resp: &mut W, x: i32) -> errors::Result<()> {
+    let mut x = x;
+    while x >= 0x80 {
+        let val = x as u8 | 0x80;
+        write_bytes(resp, &val)?;
+        x >>= 7;
+    }
+    let val = x as u8;
+    write_bytes(resp, &val)
+}
+
 pub fn write_null<W: Write>(resp: &mut W) -> errors::Result<()> {
     write_bytes(resp, &(0xFF_u8))
 }
 
 pub fn write_compact_string<W: Write>(resp: &mut W, s: &[u8]) -> errors::Result<()> {
-    write_varint_main(resp, s.len() as i32 + 1)?;
+    write_uvarint(resp, s.len() as i32 + 1)?;
     resp.write_all(s)?;
     Ok(())
 }
