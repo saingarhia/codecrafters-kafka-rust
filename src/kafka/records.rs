@@ -39,12 +39,16 @@ impl RecordsBatch {
         writer::write_bytes(resp, &self.base_timestamp)?;
         writer::write_bytes(resp, &self.max_timestamp)?;
         writer::write_bytes(resp, &self.producer_id)?;
+        println!("--------- writing producer id ---------");
         writer::write_bytes(resp, &self.producer_epoch)?;
+        println!("--------- writing base sequence ---------");
         writer::write_bytes(resp, &self.base_sequence)?;
+        println!("--------- writing records length ---------");
         // this length is 32-bit
         writer::write_bytes(resp, &(self.records.len() as u32 + 1))?;
         self.records
             .iter()
+            .inspect(|_| println!("-------------- writing actual record -------------"))
             .try_for_each(|record| record.serialize(resp))?;
         Ok(())
     }
