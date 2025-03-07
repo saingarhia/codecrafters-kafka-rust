@@ -41,6 +41,7 @@ impl RecordsBatch {
         writer::write_bytes(resp, &self.producer_id)?;
         writer::write_bytes(resp, &self.producer_epoch)?;
         writer::write_bytes(resp, &self.base_sequence)?;
+        // this length is 32-bit
         writer::write_bytes(resp, &(self.records.len() as u32 + 1))?;
         self.records
             .iter()
@@ -72,6 +73,7 @@ impl KafkaRecord {
 
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         writer::write_bytes(resp, &self.length)?;
+        println!("-------- now writing attributes: {self.attributes} ----------");
         writer::write_bytes(resp, &self.attributes)?;
         writer::write_bytes(resp, &self.timestamp_delta)?;
         writer::write_bytes(resp, &self.offset_delta)?;
