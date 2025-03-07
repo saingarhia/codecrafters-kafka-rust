@@ -58,10 +58,17 @@ pub struct KafkaRecord {
     pub offset_delta: i8,
     pub key: Vec<u8>,
     pub value: Vec<u8>,
-    pub header: KafkaRecordHeader,
+    pub headers: Vec<KafkaRecordHeader>,
 }
 
 impl KafkaRecord {
+    pub fn new() -> Self {
+        Self {
+            length: 0,
+            ..Default::default()
+        }
+    }
+
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         writer::write_bytes(resp, &self.length)?;
         writer::write_bytes(resp, &self.attributes)?;
@@ -69,7 +76,8 @@ impl KafkaRecord {
         writer::write_bytes(resp, &self.offset_delta)?;
         writer::write_compact_string(resp, &self.key)?;
         writer::write_compact_string(resp, &self.value)?;
-        self.header.serialize(resp)
+        writer::write_bytes(resp, &(self.headers.len() as u8 + 1))?;
+        self.headers.iter().try_for_each(|h| h.serialize(resp))
     }
 }
 
