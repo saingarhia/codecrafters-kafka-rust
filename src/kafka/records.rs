@@ -45,7 +45,7 @@ impl RecordsBatch {
         writer::write_bytes(resp, &self.base_sequence)?;
         println!("--------- writing records length ---------");
         // this length is 32-bit
-        writer::write_bytes(resp, &(self.records.len() as u32 + 1))?;
+        writer::write_bytes(resp, &(self.records.len() as u32))?;
         self.records
             .iter()
             .inspect(|_| println!("-------------- writing actual record -------------"))
