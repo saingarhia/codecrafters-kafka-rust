@@ -231,12 +231,12 @@ struct FetchResponsePartition {
 }
 
 impl FetchResponsePartition {
-    fn new(_part: &FetchPartition) -> Self {
+    fn new(_part: &FetchPartition, _meta: &metadata::PartitionMetadata) -> Self {
         let aborted_transactions = vec![];
         Self {
             aborted_transactions,
             error_code: 0, //FETCH_RESPONSE_UNKNOWN_TOPIC,
-            records: vec![records::RecordsBatch::new()],
+            records: vec![records::RecordsBatch::new(_meta)],
             ..Default::default()
         }
     }
@@ -288,7 +288,7 @@ impl FetchResponseTopic {
                     FETCH_RESPONSE_UNKNOWN_TOPIC,
                 ));
             } else {
-                acc.push(FetchResponsePartition::new(part));
+                acc.push(FetchResponsePartition::new(part, pp_meta.unwrap()));
             }
             acc
         });
@@ -303,7 +303,6 @@ impl FetchResponseTopic {
         writer::write_bytes(resp, &self.topic_id)?;
         writer::write_bytes(resp, &(self.partitions.len() as u8 + 1))?;
         self.partitions.iter().try_for_each(|p| p.serialize(resp))?;
-        println!("topic responses tag buffer ***********");
         writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
     }

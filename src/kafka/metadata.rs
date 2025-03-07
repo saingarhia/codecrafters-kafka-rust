@@ -11,12 +11,16 @@ use super::records;
 #[derive(Debug, Clone)]
 pub struct TopicMetadata {
     pub uuid: u128,
+    pub record_id1: usize,
+    pub record_id2: usize,
 }
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct PartitionMetadata {
     pub partition_id: i32,
+    pub record_id1: usize,
+    pub record_id2: usize,
 }
 
 #[allow(dead_code)]
@@ -117,9 +121,11 @@ impl Metadata {
                     2 => {
                         let topic_name = parser::read_compact_string(buffer)?;
                         let topic_uuid = parser::read_u128(buffer)?;
-                        topic_map
-                            .entry(topic_name)
-                            .or_insert(TopicMetadata { uuid: topic_uuid });
+                        topic_map.entry(topic_name).or_insert(TopicMetadata {
+                            uuid: topic_uuid,
+                            record_id1: rec,
+                            record_id2: i,
+                        });
 
                         let tagged_field = parser::read_byte(buffer)?;
                         assert_eq!(tagged_field, 0);
@@ -141,9 +147,17 @@ impl Metadata {
                         partition_map
                             .entry(topic_uuid)
                             .and_modify(|pm: &mut Vec<PartitionMetadata>| {
-                                pm.push(PartitionMetadata { partition_id })
+                                pm.push(PartitionMetadata {
+                                    partition_id,
+                                    record_id1: rec,
+                                    record_id2: i,
+                                })
                             })
-                            .or_insert(vec![PartitionMetadata { partition_id }]);
+                            .or_insert(vec![PartitionMetadata {
+                                partition_id,
+                                record_id1: rec,
+                                record_id2: i,
+                            }]);
                     }
                     _ => unimplemented!(),
                 }

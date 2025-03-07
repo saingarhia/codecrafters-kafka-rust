@@ -1,4 +1,4 @@
-use super::{errors, writer};
+use super::{errors, metadata, writer};
 use std::io::Write;
 
 #[allow(dead_code)]
@@ -20,7 +20,7 @@ pub(crate) struct RecordsBatch {
 }
 
 impl RecordsBatch {
-    pub fn new() -> Self {
+    pub fn new(_meta: &metadata::PartitionMetadata) -> Self {
         Self {
             base_sequence: 0x33,
             records: vec![KafkaRecord::new()],
