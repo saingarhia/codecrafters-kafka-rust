@@ -11,7 +11,6 @@ fn convert<T, const N: usize>(v: Vec<T>) -> [T; N] {
 pub fn read_compact_string<R: Read>(req: &mut R) -> errors::Result<Vec<u8>> {
     let mut length = [0_u8; 1];
     req.read_exact(&mut length)?;
-    println!("reading string of length: {length:?}");
     if length[0] == 0 {
         return Ok(vec![]);
     }

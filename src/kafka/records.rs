@@ -39,16 +39,12 @@ impl RecordsBatch {
         writer::write_bytes(resp, &self.base_timestamp)?;
         writer::write_bytes(resp, &self.max_timestamp)?;
         writer::write_bytes(resp, &self.producer_id)?;
-        println!("--------- writing producer id ---------");
         writer::write_bytes(resp, &self.producer_epoch)?;
-        println!("--------- writing base sequence ---------");
         writer::write_bytes(resp, &self.base_sequence)?;
-        println!("--------- writing records length ---------");
         // this length is 32-bit
         writer::write_bytes(resp, &(self.records.len() as u32))?;
         self.records
             .iter()
-            .inspect(|_| println!("-------------- writing actual record -------------"))
             .try_for_each(|record| record.serialize(resp))?;
         Ok(())
     }
@@ -82,22 +78,12 @@ impl KafkaRecord {
 
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         writer::write_varint_main(resp, self.length as i32)?;
-        println!(
-            "-------- now writing attributes: {0} ----------",
-            self.attributes
-        );
         writer::write_bytes(resp, &self.attributes)?;
-        println!("-------- now writing timestamp  ----------");
         writer::write_varint(resp, self.timestamp_delta as usize)?;
-        println!("-------- now writing offset_delta ----------");
         writer::write_varint_main(resp, self.offset_delta as i32)?;
-        println!("-------- now writing key ----------");
         writer::write_compact_string(resp, &self.key)?;
-        println!("-------- now writing value ----------");
         writer::write_compact_string(resp, &self.value)?;
-        println!("-------- now writing  header length ----------");
         writer::write_bytes(resp, &(self.headers.len() as u8 + 1))?;
-        println!("-------- now writing headers ----------");
         self.headers.iter().try_for_each(|h| h.serialize(resp))
     }
 }
