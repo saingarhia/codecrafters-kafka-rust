@@ -75,11 +75,17 @@ impl KafkaRecord {
         writer::write_bytes(resp, &self.length)?;
         println!("-------- now writing attributes: {self.attributes} ----------");
         writer::write_bytes(resp, &self.attributes)?;
+        println!("-------- now writing timestamp  ----------");
         writer::write_bytes(resp, &self.timestamp_delta)?;
+        println!("-------- now writing offset_delta ----------");
         writer::write_bytes(resp, &self.offset_delta)?;
+        println!("-------- now writing key ----------");
         writer::write_compact_string(resp, &self.key)?;
+        println!("-------- now writing value ----------");
         writer::write_compact_string(resp, &self.value)?;
+        println!("-------- now writing  header length ----------");
         writer::write_bytes(resp, &(self.headers.len() as u8 + 1))?;
+        println!("-------- now writing headers ----------");
         self.headers.iter().try_for_each(|h| h.serialize(resp))
     }
 }
