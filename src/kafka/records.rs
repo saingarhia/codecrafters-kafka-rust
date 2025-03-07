@@ -71,7 +71,7 @@ impl KafkaRecord {
         Self {
             length: 6,
             attributes: 0x44,
-            timestamp_delta: 0x80,
+            timestamp_delta: 0x77,
             offset_delta: 11,
             key: "record-key".into(),
             value: "record-value".into(),
