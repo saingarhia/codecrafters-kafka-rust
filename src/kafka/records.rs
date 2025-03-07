@@ -52,7 +52,7 @@ impl RecordsBatch {
 #[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct KafkaRecord {
-    pub length: i8,
+    pub length: i32,
     pub attributes: i8,
     pub timestamp_delta: i8,
     pub offset_delta: i8,
