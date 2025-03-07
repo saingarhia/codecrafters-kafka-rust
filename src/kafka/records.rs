@@ -41,7 +41,8 @@ impl RecordsBatch {
         writer::write_bytes(resp, &self.producer_id)?;
         writer::write_bytes(resp, &self.producer_epoch)?;
         writer::write_bytes(resp, &self.base_sequence)?;
-        writer::write_bytes(resp, &(self.records.len() as u8 + 1))?;
+        println!("------ encoding records - count: {}", self.records.len());
+        writer::write_bytes(resp, &(self.records.len() as u32 + 1))?;
         self.records
             .iter()
             .try_for_each(|record| record.serialize(resp))?;
