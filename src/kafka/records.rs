@@ -81,16 +81,16 @@ impl KafkaRecord {
     }
 
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
-        writer::write_bytes(resp, &self.length)?;
+        writer::write_varint_main(resp, self.length as i32)?;
         println!(
             "-------- now writing attributes: {0} ----------",
             self.attributes
         );
         writer::write_bytes(resp, &self.attributes)?;
         println!("-------- now writing timestamp  ----------");
-        writer::write_bytes(resp, &self.timestamp_delta)?;
+        writer::write_varint_main(resp, self.timestamp_delta as i32)?;
         println!("-------- now writing offset_delta ----------");
-        writer::write_bytes(resp, &self.offset_delta)?;
+        writer::write_varint_main(resp, self.offset_delta as i32)?;
         println!("-------- now writing key ----------");
         writer::write_compact_string(resp, &self.key)?;
         println!("-------- now writing value ----------");
