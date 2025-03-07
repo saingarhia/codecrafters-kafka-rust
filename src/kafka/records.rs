@@ -88,7 +88,7 @@ impl KafkaRecord {
         );
         writer::write_bytes(resp, &self.attributes)?;
         println!("-------- now writing timestamp  ----------");
-        writer::write_varint(resp, self.timestamp_delta.into())?;
+        writer::write_varint(resp, self.timestamp_delta as usize)?;
         println!("-------- now writing offset_delta ----------");
         writer::write_varint_main(resp, self.offset_delta as i32)?;
         println!("-------- now writing key ----------");
