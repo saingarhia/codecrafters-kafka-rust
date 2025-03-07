@@ -41,7 +41,6 @@ impl RecordsBatch {
         writer::write_bytes(resp, &self.producer_id)?;
         writer::write_bytes(resp, &self.producer_epoch)?;
         writer::write_bytes(resp, &self.base_sequence)?;
-        println!("------ encoding records - count: {}", self.records.len());
         writer::write_bytes(resp, &(self.records.len() as u32 + 1))?;
         self.records
             .iter()
@@ -53,7 +52,7 @@ impl RecordsBatch {
 #[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct KafkaRecord {
-    pub length: i32,
+    pub length: i8,
     pub attributes: i8,
     pub timestamp_delta: i8,
     pub offset_delta: i8,
@@ -66,6 +65,7 @@ impl KafkaRecord {
     pub fn new() -> Self {
         Self {
             length: 0,
+            attributes: 0x44,
             ..Default::default()
         }
     }
