@@ -37,7 +37,12 @@ impl Metadata {
     fn decode<R: Read>(buffer: &mut R) -> errors::Result<Self> {
         let mut topic_map = HashMap::new();
         let mut partition_map = HashMap::new();
-        let mut records: [records::RecordsBatch; 4];
+        let mut records: [records::RecordsBatch; 4] = [
+            records::RecordsBatch::new(),
+            records::RecordsBatch::new(),
+            records::RecordsBatch::new(),
+            records::RecordsBatch::new(),
+        ];
 
         for rec in 0..4 {
             let base_offset = parser::read_u64(buffer)?;
@@ -68,14 +73,11 @@ impl Metadata {
             records[rec].base_sequence = base_sequence;
             let record_size = parser::read_int(buffer)?;
 
-            records[rec].records = vec![records::KafkaRecord; record_size as usize];
+            records[rec].records = vec![records::KafkaRecord::new(); record_size as usize];
 
             println!("Record size: {:?}", record_size);
 
             for i in 0..record_size as usize {
-                // initialize and then update
-                records[rec].records[i] = records::KafkaRecord::new();
-
                 let length = parser::read_varint(buffer)?;
                 records[rec].records[i].length = length;
                 println!("record {i} len: {:?}", length);
