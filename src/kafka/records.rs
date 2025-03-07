@@ -71,6 +71,9 @@ impl KafkaRecord {
         Self {
             length: 0,
             attributes: 0x44,
+            key: "record-key".into(),
+            value: "record-value".into(),
+            headers: vec![KafkaRecordHeader::new()],
             ..Default::default()
         }
     }
@@ -105,6 +108,13 @@ pub struct KafkaRecordHeader {
 }
 
 impl KafkaRecordHeader {
+    pub fn new() -> Self {
+        Self {
+            key: "key-header".into(),
+            value: "value-header".into(),
+        }
+    }
+
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         writer::write_compact_string(resp, &self.key)?;
         writer::write_compact_string(resp, &self.value)?;
