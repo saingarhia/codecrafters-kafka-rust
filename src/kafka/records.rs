@@ -59,7 +59,7 @@ impl RecordsBatch {
 pub struct KafkaRecord {
     pub length: i8,
     pub attributes: i8,
-    pub timestamp_delta: i32,
+    pub timestamp_delta: i64,
     pub offset_delta: i8,
     pub key: Vec<u8>,
     pub value: Vec<u8>,
