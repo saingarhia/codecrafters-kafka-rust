@@ -45,7 +45,7 @@ impl RecordsBatch {
             .try_for_each(|record| record.serialize(&mut copybuf))?;
         let batch_length = copybuf.buffer().len() as i32;
         drop(copybuf);
-        Ok((crc32c(&buf[0..batch_length]), batch_length))
+        Ok((crc32c(&buf[0..batch_length as usize]), batch_length))
     }
 
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
