@@ -45,11 +45,12 @@ impl RecordsBatch {
             .try_for_each(|record| record.serialize(&mut copybuf))?;
         let batch_length = copybuf.buffer().len() as i32;
         drop(copybuf);
-        Ok((crc32c(&buf), batch_length))
+        Ok((crc32c(&buf[0..batch_length]), batch_length))
     }
 
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         let (crc, batch_length) = self.calc_meta()?;
+        println!("---------- crc: {crc}, batch length: {batch_length} ----------");
         writer::write_bytes(resp, &self.base_offset)?;
         writer::write_bytes(resp, &batch_length)?;
         writer::write_bytes(resp, &self.partition_leader_epoch)?;
