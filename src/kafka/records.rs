@@ -106,7 +106,7 @@ impl KafkaRecord {
         writer::write_varint_main(resp, self.offset_delta as i32)?;
         writer::write_compact_string(resp, &self.key)?;
         writer::write_compact_string(resp, &self.value)?;
-        writer::write_bytes(resp, &(self.headers.len() as u8 + 1))?;
+        writer::write_bytes(resp, &(self.headers.len() as u8))?;
         self.headers.iter().try_for_each(|h| h.serialize(resp))
     }
 }
