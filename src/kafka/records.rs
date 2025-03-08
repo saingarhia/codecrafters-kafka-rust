@@ -29,7 +29,7 @@ impl RecordsBatch {
         }
     }
 
-    fn calc_crc(&self) -> errors::Result<u32> {
+    fn calc_meta(&self) -> errors::Result<(u32, i32)> {
         let mut buf = vec![0_u8; 1500];
         let mut copybuf = BufWriter::new(&mut buf);
         writer::write_bytes(&mut copybuf, &self.attributes)?;
@@ -43,14 +43,15 @@ impl RecordsBatch {
         self.records
             .iter()
             .try_for_each(|record| record.serialize(&mut copybuf))?;
+        let batch_length = copybuf.buffer().len() as i32;
         drop(copybuf);
-        Ok(crc32c(&buf))
+        Ok((crc32c(&buf), batch_length))
     }
 
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
-        let crc: u32 = self.calc_crc()?;
+        let (crc, batch_length) = self.calc_meta()?;
         writer::write_bytes(resp, &self.base_offset)?;
-        writer::write_bytes(resp, &self.batch_length)?;
+        writer::write_bytes(resp, &batch_length)?;
         writer::write_bytes(resp, &self.partition_leader_epoch)?;
         writer::write_bytes(resp, &self.magic)?;
         writer::write_bytes(resp, &crc)?;
