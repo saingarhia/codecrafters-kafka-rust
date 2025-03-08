@@ -87,12 +87,6 @@ pub struct KafkaRecord {
 impl KafkaRecord {
     pub fn new() -> Self {
         Self {
-            length: 6,
-            attributes: 0x44,
-            timestamp_delta: 0x77,
-            offset_delta: 11,
-            key: "record-key".into(),
-            value: "record-value".into(),
             headers: vec![KafkaRecordHeader::new()],
             ..Default::default()
         }
@@ -119,8 +113,9 @@ pub struct KafkaRecordHeader {
 impl KafkaRecordHeader {
     pub fn new() -> Self {
         Self {
-            key: "key-header".into(),
-            value: "value-header".into(),
+            //key: "key-header".into(),
+            //value: "value-header".into(),
+            ..Default::default()
         }
     }
 
