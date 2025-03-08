@@ -231,12 +231,12 @@ struct FetchResponsePartition {
 }
 
 impl FetchResponsePartition {
-    fn new(_part: &FetchPartition, _meta: &Vec<metadata::PartitionMetadata>, records: &metadata::LogBatchRecords) -> Self {
-        let aborted_transactions = vec![];
+    fn new(part: &metadata::PartitionMetadata, meta: &metadata::Metadata) -> Self {
+        let aborted_transactions: Vec<FetchResponseAbortedTransaction> = vec![];
         Self {
             aborted_transactions,
-            error_code: 0, //FETCH_RESPONSE_UNKNOWN_TOPIC,
-            records: records.clone().into(),
+            //error_code: 0, //FETCH_RESPONSE_UNKNOWN_TOPIC,
+            records: vec![meta.records[part.record_id1].clone()],
             ..Default::default()
         }
     }
@@ -282,16 +282,17 @@ impl FetchResponseTopic {
     pub fn new(topic: &FetchTopic, metadata: &Arc<Mutex<metadata::Metadata>>) -> Self {
         let metadata = metadata.lock().unwrap();
         let pp_meta = metadata.partition_map.get(&topic.topic_id);
-        let partitions = topic.partitions.iter().fold(vec![], |mut acc, part| {
-            if pp_meta.is_none() {
-                acc.push(FetchResponsePartition::new_with_error(
-                    FETCH_RESPONSE_UNKNOWN_TOPIC,
-                ));
-            } else {
-                acc.push(FetchResponsePartition::new(part, pp_meta.unwrap(), &metadata.records));
-            }
+        let partitions = if let Some(ppm) = pp_meta {
+            let mut acc = vec![];
+            ppm.iter().for_each(|pp| {
+                acc.push(FetchResponsePartition::new(pp, &metadata));
+            });
             acc
-        });
+        } else {
+           vec![FetchResponsePartition::new_with_error(
+                FETCH_RESPONSE_UNKNOWN_TOPIC,
+            )]
+        };
         Self {
             topic_id: topic.topic_id,
             partitions,
