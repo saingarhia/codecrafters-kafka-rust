@@ -289,7 +289,7 @@ impl FetchResponseTopic {
             });
             acc
         } else {
-           vec![FetchResponsePartition::new_with_error(
+            vec![FetchResponsePartition::new_with_error(
                 FETCH_RESPONSE_UNKNOWN_TOPIC,
             )]
         };
@@ -340,7 +340,6 @@ impl FetchResponse {
         writer::write_bytes(resp, &self.session_id)?;
         writer::write_bytes(resp, &(self.responses.len() as u8 + 1))?;
         self.responses.iter().try_for_each(|r| r.serialize(resp))?;
-        println!("response body tag buffer ***********");
         writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
     }
