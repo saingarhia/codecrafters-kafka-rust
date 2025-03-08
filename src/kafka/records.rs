@@ -20,7 +20,7 @@ pub(crate) struct RecordsBatch {
 }
 
 impl RecordsBatch {
-    pub fn new(_meta: &metadata::PartitionMetadata) -> Self {
+    pub fn new() -> Self {
         Self {
             base_sequence: 0x33,
             records: vec![KafkaRecord::new()],

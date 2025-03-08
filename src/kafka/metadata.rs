@@ -7,6 +7,8 @@ use crate::kafka::parser;
 
 use super::records;
 
+pub type LogBatchRecords = [records::RecordsBatch; 4];
+
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct TopicMetadata {
@@ -28,7 +30,7 @@ pub struct PartitionMetadata {
 pub struct Metadata {
     pub topic_map: HashMap<Vec<u8>, TopicMetadata>,
     pub partition_map: HashMap<u128, Vec<PartitionMetadata>>,
-    pub records: [records::RecordsBatch; 4],
+    pub records: LogBatchRecords,
 }
 
 impl Metadata {

@@ -231,12 +231,12 @@ struct FetchResponsePartition {
 }
 
 impl FetchResponsePartition {
-    fn new(_part: &FetchPartition, _meta: &metadata::PartitionMetadata) -> Self {
+    fn new(_part: &FetchPartition, _meta: &Vec<metadata::PartitionMetadata>, records: &metadata::LogBatchRecords) -> Self {
         let aborted_transactions = vec![];
         Self {
             aborted_transactions,
             error_code: 0, //FETCH_RESPONSE_UNKNOWN_TOPIC,
-            records: vec![records::RecordsBatch::new(_meta)],
+            records: records.clone().into(),
             ..Default::default()
         }
     }
@@ -288,7 +288,7 @@ impl FetchResponseTopic {
                     FETCH_RESPONSE_UNKNOWN_TOPIC,
                 ));
             } else {
-                acc.push(FetchResponsePartition::new(part, pp_meta.unwrap()));
+                acc.push(FetchResponsePartition::new(part, pp_meta.unwrap(), &metadata.records));
             }
             acc
         });
