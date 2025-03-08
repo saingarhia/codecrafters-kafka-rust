@@ -50,7 +50,10 @@ impl RecordsBatch {
 
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         let (crc, batch_length) = self.calc_meta()?;
-        println!("---------- crc: {crc:#x}, batch length: {batch_length} ----------");
+        println!(
+            "---------- crc: {crc:#x} vs {:#x}, batch length: {batch_length} vs {} ----------",
+            self.batch_length, self.crc
+        );
         writer::write_bytes(resp, &self.base_offset)?;
         writer::write_bytes(resp, &batch_length)?;
         writer::write_bytes(resp, &self.partition_leader_epoch)?;
