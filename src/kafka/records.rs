@@ -52,7 +52,7 @@ impl RecordsBatch {
         let (crc, batch_length) = self.calc_meta()?;
         println!(
             "---------- crc: {crc:#x} vs {:#x}, batch length: {batch_length} vs {} ----------",
-            self.batch_length, self.crc
+            self.crc, self.batch_length
         );
         writer::write_bytes(resp, &self.base_offset)?;
         writer::write_bytes(resp, &batch_length)?;
