@@ -113,6 +113,7 @@ impl KafkaRecord {
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         // need to determine length dynamically
         let len = self.size();
+        println!("------ length {} vs new length: {len} -----", self.length);
         writer::write_varint_main(resp, len as i32)?;
         writer::write_bytes(resp, &self.attributes)?;
         writer::write_varint(resp, self.timestamp_delta as usize)?;
