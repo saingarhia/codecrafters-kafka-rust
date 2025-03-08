@@ -1,5 +1,6 @@
 use super::{errors, metadata, writer};
-use std::io::Write;
+use crc32c::crc32c;
+use std::io::{BufWriter, Write};
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
@@ -28,13 +29,31 @@ impl RecordsBatch {
         }
     }
 
+    fn calc_crc(&self) -> errors::Result<u32> {
+        let mut buf = vec![0_u8; 1500];
+        let mut copybuf = BufWriter::new(&mut buf);
+        writer::write_bytes(&mut copybuf, &self.attributes)?;
+        writer::write_bytes(&mut copybuf, &self.last_offset_delta)?;
+        writer::write_bytes(&mut copybuf, &self.base_timestamp)?;
+        writer::write_bytes(&mut copybuf, &self.max_timestamp)?;
+        writer::write_bytes(&mut copybuf, &self.producer_id)?;
+        writer::write_bytes(&mut copybuf, &self.producer_epoch)?;
+        writer::write_bytes(&mut copybuf, &self.base_sequence)?;
+        writer::write_bytes(&mut copybuf, &(self.records.len() as u32))?;
+        self.records
+            .iter()
+            .try_for_each(|record| record.serialize(&mut copybuf))?;
+        drop(copybuf);
+        Ok(crc32c(&buf))
+    }
+
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
+        let crc: u32 = self.calc_crc()?;
         writer::write_bytes(resp, &self.base_offset)?;
         writer::write_bytes(resp, &self.batch_length)?;
         writer::write_bytes(resp, &self.partition_leader_epoch)?;
         writer::write_bytes(resp, &self.magic)?;
-        //writer::write_bytes(resp, &self.crc)?;
-        writer::write_bytes(resp, &55_i32)?;
+        writer::write_bytes(resp, &crc)?;
         writer::write_bytes(resp, &self.attributes)?;
         writer::write_bytes(resp, &self.last_offset_delta)?;
         writer::write_bytes(resp, &self.base_timestamp)?;
