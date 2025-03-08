@@ -2,6 +2,10 @@ use super::{errors, metadata, writer};
 use crc32c::crc32c;
 use std::io::{BufWriter, Write};
 
+fn size_of<T: Sized>(_v: &T) -> usize {
+    std::mem::size_of::<T>()
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub(crate) struct RecordsBatch {
@@ -58,7 +62,7 @@ impl RecordsBatch {
         writer::write_bytes(resp, &batch_length)?;
         writer::write_bytes(resp, &self.partition_leader_epoch)?;
         writer::write_bytes(resp, &self.magic)?;
-        writer::write_bytes(resp, &self.crc)?;
+        writer::write_bytes(resp, &crc)?;
         writer::write_bytes(resp, &self.attributes)?;
         writer::write_bytes(resp, &self.last_offset_delta)?;
         writer::write_bytes(resp, &self.base_timestamp)?;
@@ -95,8 +99,21 @@ impl KafkaRecord {
         }
     }
 
+    fn size(&self) -> usize {
+        size_of(&self.attributes)
+            + size_of(&self.timestamp_delta)
+            + size_of(&self.offset_delta)
+            + self.key.len()
+            + 1
+            + self.value.len()
+            + 1
+            + self.headers.iter().fold(0, |acc, h| acc + h.size())
+    }
+
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
-        writer::write_varint_main(resp, self.length as i32)?;
+        // need to determine length dynamically
+        let len = self.size();
+        writer::write_varint_main(resp, len as i32)?;
         writer::write_bytes(resp, &self.attributes)?;
         writer::write_varint(resp, self.timestamp_delta as usize)?;
         writer::write_varint_main(resp, self.offset_delta as i32)?;
@@ -120,6 +137,10 @@ impl KafkaRecordHeader {
             //value: "value-header".into(),
             ..Default::default()
         }
+    }
+
+    fn size(&self) -> usize {
+        self.key.len() + 1 + self.value.len() + 1
     }
 
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
