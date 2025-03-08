@@ -34,7 +34,7 @@ impl RecordsBatch {
         writer::write_bytes(resp, &self.partition_leader_epoch)?;
         writer::write_bytes(resp, &self.magic)?;
         //writer::write_bytes(resp, &self.crc)?;
-        writer::write_bytes(resp, &0_i32)?;
+        writer::write_bytes(resp, &55_i32)?;
         writer::write_bytes(resp, &self.attributes)?;
         writer::write_bytes(resp, &self.last_offset_delta)?;
         writer::write_bytes(resp, &self.base_timestamp)?;
