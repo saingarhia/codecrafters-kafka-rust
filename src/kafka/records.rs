@@ -27,7 +27,6 @@ pub(crate) struct RecordsBatch {
 impl RecordsBatch {
     pub fn new() -> Self {
         Self {
-            base_sequence: 0x33,
             records: vec![KafkaRecord::new()],
             ..Default::default()
         }
