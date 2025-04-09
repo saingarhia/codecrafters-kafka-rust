@@ -63,6 +63,7 @@ impl Metadata {
             records[rec].magic = magic;
             let crc = parser::read_int(buffer)?;
             records[rec].crc = crc;
+            println!("----------- CRC from disk: {crc} -----------");
             let attributes = parser::read_short(buffer)?;
             records[rec].attributes = attributes;
             let last_offset_delta = parser::read_int(buffer)?;
