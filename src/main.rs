@@ -77,5 +77,8 @@ fn process_tcp() -> kafka::errors::Result<()> {
 }
 
 fn main() {
-    let _ = process_tcp();
+    match process_tcp() {
+        Ok(_) => (),
+        Err(e) => println!("Error processing connection: {e:?}"),
+    };
 }

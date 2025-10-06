@@ -202,6 +202,7 @@ struct FetchResponseAbortedTransaction {
 }
 
 impl FetchResponseAbortedTransaction {
+    #[allow(dead_code)]
     fn new(_req: &FetchRequest) -> Self {
         Self {
             ..Default::default()

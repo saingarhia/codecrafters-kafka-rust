@@ -19,6 +19,10 @@ pub const MAX_SUPPORTED_DESCRIBE_PARTITION_VER: u16 = 0;
 pub const MIN_SUPPORTED_FETCH_VER: u16 = 0;
 pub const MAX_SUPPORTED_FETCH_VER: u16 = 16;
 
+pub const KAFKA_RECORDTYPE_FEATURE: i8 = 12;
+pub const KAFKA_RECORDTYPE_TOPIC: i8 = 2;
+pub const KAFKA_RECORDTYPE_PARTITION: i8 = 3;
+
 #[repr(u16)]
 #[derive(Debug)]
 pub enum ErrorCodes {
