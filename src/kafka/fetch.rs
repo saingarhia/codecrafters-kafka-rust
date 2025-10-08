@@ -227,17 +227,26 @@ struct FetchResponsePartition {
     log_start_offset: u64,
     aborted_transactions: Vec<FetchResponseAbortedTransaction>,
     preferred_read_replica: u32,
-    records: Vec<records::RecordsBatch>,
+    //records: Vec<records::RecordsBatch>,
+    records: Vec<u8>,
     tag_buffer: u8,
 }
 
 impl FetchResponsePartition {
-    fn new(part: &metadata::PartitionMetadata, meta: &metadata::Metadata) -> Self {
+    fn new(topic_meta: &metadata::TopicMetadata, partition: u32) -> Self {
         let aborted_transactions: Vec<FetchResponseAbortedTransaction> = vec![];
+        let log_file_name = format!(
+            "/tmp/kraft-combined-logs/{}-{}/00000000000000000000.log",
+            topic_meta.topic_name, partition
+        );
+
+        println!("***************** LOG FILE: {log_file_name} ********************");
+        let records = std::fs::read(log_file_name).unwrap();
+        println!("Read {} bytes from this file!", records.len());
         Self {
             aborted_transactions,
             //error_code: 0, //FETCH_RESPONSE_UNKNOWN_TOPIC,
-            records: vec![meta.records[part.record_id1].clone()],
+            records,
             ..Default::default()
         }
     }
@@ -257,15 +266,20 @@ impl FetchResponsePartition {
         writer::write_bytes(resp, &self.high_watermark)?;
         writer::write_bytes(resp, &self.last_stable_offset)?;
         writer::write_bytes(resp, &self.log_start_offset)?;
-        writer::write_bytes(resp, &(self.aborted_transactions.len() as u8 + 1))?;
+        writer::write_bytes(resp, &(self.aborted_transactions.len() as u8))?;
         self.aborted_transactions
             .iter()
             .try_for_each(|t| t.serialize(resp))?;
         writer::write_bytes(resp, &self.preferred_read_replica)?;
 
-        writer::write_bytes(resp, &(self.records.len() as u8 + 1))?;
-        self.records.iter().try_for_each(|t| t.serialize(resp))?;
-        println!("partition tag buffer writing now!! ***********");
+        if false {
+            //writer::write_bytes(resp, &(self.records.len() as u8 + 1))?;
+            //self.records.iter().try_for_each(|t| t.serialize(resp))?;
+        } else {
+            // hard code 2 records for now
+            writer::write_bytes(resp, &2_u8)?;
+            resp.write_all(&self.records)?;
+        }
         writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
     }
@@ -282,18 +296,19 @@ struct FetchResponseTopic {
 impl FetchResponseTopic {
     pub fn new(topic: &FetchTopic, metadata: &Arc<Mutex<metadata::Metadata>>) -> Self {
         let metadata = metadata.lock().unwrap();
-        let pp_meta = metadata.partition_map.get(&topic.topic_id);
-        let partitions = if let Some(ppm) = pp_meta {
-            let mut acc = vec![];
-            ppm.iter().for_each(|pp| {
-                acc.push(FetchResponsePartition::new(pp, &metadata));
-            });
-            acc
+        let topic_meta = metadata.get_topic(topic.topic_id);
+
+        let partitions = if let Some(ppm) = topic_meta {
+            topic.partitions.iter().fold(vec![], |mut acc, part| {
+                acc.push(FetchResponsePartition::new(ppm, part.partition));
+                acc
+            })
         } else {
             vec![FetchResponsePartition::new_with_error(
                 FETCH_RESPONSE_UNKNOWN_TOPIC,
             )]
         };
+
         Self {
             topic_id: topic.topic_id,
             partitions,

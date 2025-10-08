@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 use super::{ErrorCodes, MAX_SUPPORTED_API_VERSION, MIN_SUPPORTED_API_VERSION};
 use crate::kafka::{apikey, body, errors, fetch, header, metadata, partitions, writer};
 use std::fmt;
@@ -51,7 +52,11 @@ impl Request {
                 // tag buffer is the first after corelation ID
                 writer::write_bytes(response, &0_u8)?;
                 let fetch_resp = fetch::FetchResponse::new(fetcher, metadata);
-                fetch_resp.serialize(response)?;
+                if let Err(e) = fetch_resp.serialize(response) {
+                    println!("there's error serializing data: {e:?}");
+                }
+                //fetch_resp.serialize(response)?;
+                println!("Fetch response serialized!!!!!");
             }
             body::RequestBody::ApiVersions(_throttle, _tbuf) => {
                 if api_ver < super::MIN_SUPPORTED_API_VERSION || api_ver > MAX_SUPPORTED_API_VERSION
@@ -76,6 +81,7 @@ impl Request {
                 let _ = response.write(&[0_u8]);
             }
             body::RequestBody::DescribePartitions(p) => {
+                println!("======================= its DescribePartitions ====================");
                 // tag buffer is first (immediately after correlation id) as per the test
                 writer::write_bytes(response, &0_u8)?;
 
@@ -89,13 +95,17 @@ impl Request {
                         .iter()
                         .enumerate()
                         .map(|(topic_idx, t)| {
-                            let name = t.clone().to_vec(); //.clone();
-                            let topic = metadata.topic_map.get(&name);
-                            let uuid = topic.map(|tt| tt.uuid).unwrap_or(0);
+                            let topic = metadata.get_topic(u128::from_be_bytes(
+                                t.clone()
+                                    .try_into()
+                                    .expect("topic vector to be 16 bytes in length!"),
+                            ));
+                            println!("============== foudn topic: {topic:?}");
+                            let uuid = topic.map(|tt| tt.uuid_u128).unwrap_or(0);
                             let partition = metadata.partition_map.get(&uuid);
                             partitions::Topic {
                                 error_code: if topic.is_some() { 0 } else { 3 },
-                                name: Some(name),
+                                name: Some(t.clone()),
                                 topic_id: uuid,
                                 is_internal: false,
                                 tag_buffer: 0,

@@ -32,40 +32,40 @@ pub(crate) struct RecordsBatch {
 impl std::fmt::Display for RecordsBatch {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut msg: String = String::new();
-        write!(
+        writeln!(
             &mut msg,
-            "base_offset: {}, batch_length: {}\n",
+            "base_offset: {}, batch_length: {}",
             self.base_offset, self.batch_length
         )
         .expect("filed to write 1");
-        write!(
+        writeln!(
             &mut msg,
-            "leader epoch: {}, magic: {}, crc: {:0x}\n",
+            "leader epoch: {}, magic: {}, crc: {:0x}",
             self.partition_leader_epoch, self.magic, self.crc
         )
-        .expect("failed to write! 2");
-        write!(
+        .expect("failed to writeln! 2");
+        writeln!(
             &mut msg,
-            "Attributes: {:0x}, last offset delta: {}\n",
+            "Attributes: {:0x}, last offset delta: {}",
             self.attributes, self.last_offset_delta
         )
         .expect("filed to write 3!");
-        write!(
+        writeln!(
             &mut msg,
-            "Base timestamp: {:0x}, Max timestamp: {:0x}\n",
+            "Base timestamp: {:0x}, Max timestamp: {:0x}",
             self.base_timestamp, self.max_timestamp
         )
         .expect("filed to write 4!");
-        write!(
+        writeln!(
             &mut msg,
-            "produced ID: {:0x}, producer epoch: {:0x}, num records: {}\n",
+            "produced ID: {:0x}, producer epoch: {:0x}, num records: {}",
             self.producer_id, self.producer_epoch, self.rec_length
         )
         .expect("filed to write 5!");
         self.records.iter().enumerate().for_each(|(i, record)| {
-            write!(&mut msg, "record {}: \n{:?}", i, record).expect("failed to write record!");
+            writeln!(&mut msg, "record {}:\n {:?}", i, record).expect("failed to write record!");
         });
-        write!(f, "{}", msg)
+        writeln!(f, "{}", msg)
     }
 }
 
@@ -78,42 +78,37 @@ impl RecordsBatch {
         }
     }
 
-    pub fn deserialize<R: Read>(buffer: &mut R) -> errors::Result<Self> {
+    pub fn deserialize<R: Read>(input_buffer: &mut R) -> errors::Result<Self> {
         let mut rec = RecordsBatch {
             ..Default::default()
         };
 
-        rec.base_offset = parser::read_u64(buffer)?;
-        println!("base offset: {:?}", rec.base_offset);
+        rec.base_offset = parser::read_u64(input_buffer)?;
+        rec.batch_length = parser::read_int(input_buffer)?;
 
-        rec.batch_length = parser::read_int(buffer)?;
-        println!("batch length: {:?}", rec.batch_length);
+        // lets create a cursor over batch length slice
+        // TODO - should have to copy but create it over the existing data
+        let mut data_buffer: Vec<u8> = vec![0_u8; rec.batch_length as usize];
+        input_buffer.read_exact(&mut data_buffer)?;
+        let mut buffer = std::io::Cursor::new(data_buffer);
 
-        rec.partition_leader_epoch = parser::read_int(buffer)?;
-        println!("partition_leader_epoch: {:?}", rec.partition_leader_epoch);
-
-        rec.magic = parser::read_byte(buffer)?;
-        println!("magic: {}", rec.magic);
-
-        rec.crc = parser::read_int(buffer)?;
-        println!("----------- CRC from disk: {:#x} -----------", rec.crc);
-
-        rec.attributes = parser::read_short(buffer)?;
-        println!("attributes: {:?}", rec.attributes);
-
-        rec.last_offset_delta = parser::read_int(buffer)?;
-        rec.base_timestamp = parser::read_u64(buffer)?;
-        rec.max_timestamp = parser::read_u64(buffer)?;
-        rec.producer_id = parser::read_u64(buffer)?;
-        rec.producer_epoch = parser::read_short(buffer)?;
-        rec.base_sequence = parser::read_int(buffer)?;
-        rec.rec_length = parser::read_int(buffer)?;
+        rec.partition_leader_epoch = parser::read_int(&mut buffer)?;
+        rec.magic = parser::read_byte(&mut buffer)?;
+        rec.crc = parser::read_int(&mut buffer)?;
+        rec.attributes = parser::read_short(&mut buffer)?;
+        rec.last_offset_delta = parser::read_int(&mut buffer)?;
+        rec.base_timestamp = parser::read_u64(&mut buffer)?;
+        rec.max_timestamp = parser::read_u64(&mut buffer)?;
+        rec.producer_id = parser::read_u64(&mut buffer)?;
+        rec.producer_epoch = parser::read_short(&mut buffer)?;
+        rec.base_sequence = parser::read_int(&mut buffer)?;
+        rec.rec_length = parser::read_int(&mut buffer)?;
 
         for _i in 0..rec.rec_length {
-            match KafkaRecord::deserialize(buffer) {
+            match KafkaRecord::deserialize(&mut buffer) {
                 Ok(r) => rec.records.push(r),
                 Err(e) => {
-                    println!("Unable to parse KafkaRecord!! Err: {e:?}");
+                    println!("*********************** Unable to parse KafkaRecord!! Err: {e:?}");
                     println!(
                         "Original Records length: {}, updated: {}",
                         rec.rec_length,
@@ -127,6 +122,7 @@ impl RecordsBatch {
         Ok(rec)
     }
 
+    #[allow(dead_code)]
     fn calc_meta(&self) -> errors::Result<(u32, i32)> {
         let mut buf = vec![0_u8; 1500];
         let mut copybuf = BufWriter::new(&mut buf);
@@ -147,16 +143,18 @@ impl RecordsBatch {
     }
 
     pub fn serialize<W: std::io::Write>(&self, resp: &mut W) -> errors::Result<()> {
-        let (crc, batch_length) = self.calc_meta()?;
-        println!(
-            "---------- crc: {crc:#x} vs {:#x}, batch length: {batch_length} vs {} ----------",
-            self.crc, self.batch_length
-        );
+        //let (crc, batch_length) = self.calc_meta()?;
+        //println!(
+        //    "---------- crc: {crc:#x} vs {:#x}, batch length: {batch_length} vs {} ----------",
+        //    self.crc, self.batch_length
+        //);
+        let length = self.size() as i32;
+        println!("=================== calculated batch length: {length} =================");
         writer::write_bytes(resp, &self.base_offset)?;
-        writer::write_bytes(resp, &batch_length)?;
+        writer::write_bytes(resp, &length)?;
         writer::write_bytes(resp, &self.partition_leader_epoch)?;
         writer::write_bytes(resp, &self.magic)?;
-        writer::write_bytes(resp, &crc)?;
+        writer::write_bytes(resp, &self.crc)?;
         writer::write_bytes(resp, &self.attributes)?;
         writer::write_bytes(resp, &self.last_offset_delta)?;
         writer::write_bytes(resp, &self.base_timestamp)?;
@@ -165,11 +163,31 @@ impl RecordsBatch {
         writer::write_bytes(resp, &self.producer_epoch)?;
         writer::write_bytes(resp, &self.base_sequence)?;
         // this length is 32-bit
-        writer::write_bytes(resp, &(self.rec_length as u32))?;
+        writer::write_bytes(resp, &(self.rec_length as u32 - 1))?;
         self.records
             .iter()
             .try_for_each(|record| record.serialize(resp))?;
+
+        let _ = writer::write_bytes(resp, &0_i8);
         Ok(())
+    }
+
+    pub fn size(&self) -> usize {
+        //size_of(&self.base_offset)
+        //    + size_of(&self.batch_length)
+        size_of(&self.partition_leader_epoch)
+            + size_of(&self.magic)
+            + size_of(&self.crc)
+            + size_of(&self.attributes)
+            + size_of(&self.last_offset_delta)
+            + size_of(&self.base_timestamp)
+            + size_of(&self.max_timestamp)
+            + size_of(&self.producer_id)
+            + size_of(&self.producer_epoch)
+            + size_of(&self.base_sequence)
+            + size_of(&self.rec_length)
+            + self.records.iter().take(1).fold(0, |acc, r| acc + r.size())
+            + 1
     }
 }
 
@@ -191,31 +209,31 @@ pub struct KafkaRecord {
 impl std::fmt::Display for KafkaRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut msg: String = String::new();
-        write!(
+        writeln!(
             &mut msg,
-            "length: {}, attributes: {}, timestamp_delta: {}, offset_delta: {}\n",
+            "length: {}, attributes: {}, timestamp_delta: {}, offset_delta: {}",
             self.length, self.attributes, self.timestamp_delta, self.offset_delta
         )
         .expect("KR write failed 1!");
-        write!(
+        writeln!(
             &mut msg,
-            "key length: {}, key: {:?}\n",
+            "key length: {}, key: {:?}",
             self.key_length, self.key
         )
         .expect("KR write failed 2!");
-        write!(
+        writeln!(
             &mut msg,
-            "value length: {}, value: {:?}\n",
+            "value length: {}, value: {:?}",
             self.value_length, self.value
         )
         .expect("KR write failed 3!");
-        write!(&mut msg, "num headers: {}\n", self.header_count).expect("KR write failed 4!");
+        writeln!(&mut msg, "num headers: {}", self.header_count).expect("KR write failed 4!");
         for i in 0..self.header_count {
-            write!(&mut msg, "Header {} - {:?}", i, self.headers[i as usize])
+            writeln!(&mut msg, "Header {} - {:?}", i, self.headers[i as usize])
                 .expect("KR Write failed 5!");
         }
 
-        write!(f, "{}", msg)
+        writeln!(f, "{}", msg)
     }
 }
 
@@ -235,6 +253,12 @@ impl KafkaRecord {
 
         rec.length = parser::read_varint(buffer)?;
         println!("record len: {:?}", rec.length);
+        if rec.length <= 0 {
+            println!(
+                "============== found record length of 0 - can't read anymore for this record!"
+            );
+            return Ok(rec);
+        }
 
         rec.attributes = parser::read_byte(buffer)?;
         rec.timestamp_delta = parser::read_byte(buffer)?;
@@ -246,7 +270,7 @@ impl KafkaRecord {
             rec.key = key;
         }
 
-        assert_eq!(rec.key_length, -1);
+        //assert_eq!(rec.key_length, -1);
         rec.value_length = parser::read_varint(buffer)?;
         if rec.value_length > 0 {
             rec.value = KafkaRecordValue::deserialize(buffer, rec.value_length as usize)?;
@@ -258,25 +282,24 @@ impl KafkaRecord {
         size_of(&self.attributes)
             + size_of(&self.timestamp_delta)
             + size_of(&self.offset_delta)
-            + 1
+            + size_of(&self.key_length)
             + self.key.len()
-            + self.value_length as usize
+            //+ size_of(&self.value_length)
             + self.value.size()
-            + 1
+            + size_of(&self.header_count)
             + self.headers.iter().fold(0, |acc, h| acc + h.size())
     }
 
     pub fn serialize<W: std::io::Write>(&self, resp: &mut W) -> errors::Result<()> {
         // need to determine length dynamically
-        let len = self.size();
-        println!("------ length {} vs new length: {len} -----", self.length);
-        writer::write_varint_main(resp, len as i32)?;
+        writer::write_varint_main(resp, self.size() as i32)?;
         writer::write_bytes(resp, &self.attributes)?;
         writer::write_varint(resp, self.timestamp_delta as usize)?;
         writer::write_varint_main(resp, self.offset_delta as i32)?;
         writer::write_compact_string(resp, &self.key)?;
+        // if valus is compact string, ensure that it gets
+        // 1 byte accounted for
         self.value.serialize(resp)?;
-        //writer::write_compact_string(resp, &self.value)?;
         writer::write_bytes(resp, &(self.headers.len() as u8))?;
         self.headers.iter().try_for_each(|h| h.serialize(resp))
     }
@@ -292,9 +315,9 @@ pub struct KafkaRecordHeader {
 impl std::fmt::Display for KafkaRecordHeader {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut msg: String = String::new();
-        write!(&mut msg, "key: {:?}, value: {:?}\n", self.key, self.value)
+        writeln!(&mut msg, "key: {:?}, value: {:?}", self.key, self.value)
             .expect("KRH write failed 1!");
-        write!(f, "{}", msg)
+        writeln!(f, "{}", msg)
     }
 }
 
@@ -339,10 +362,10 @@ pub enum KafkaRecordValue {
 impl std::fmt::Display for KafkaRecordValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Invalid => write!(f, "Invalid!"),
-            Self::KafkaRecordFeatureType(v) => write!(f, "{}", v),
-            Self::KafkaRecordTopicRecordType(v) => write!(f, "{}", v),
-            Self::KafkaRecordPartitionType(v) => write!(f, "{}", v),
+            Self::Invalid => writeln!(f, "Invalid!"),
+            Self::KafkaRecordFeatureType(v) => writeln!(f, "{}", v),
+            Self::KafkaRecordTopicRecordType(v) => writeln!(f, "{}", v),
+            Self::KafkaRecordPartitionType(v) => writeln!(f, "{}", v),
         }
     }
 }
@@ -422,27 +445,27 @@ pub struct KafkaRecordFeature {
 impl std::fmt::Display for KafkaRecordFeature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut msg = String::new();
-        write!(
+        writeln!(
             &mut msg,
-            "Frame version: {}, Frame Type: {}, Version: {}\n",
+            "Frame version: {}, Frame Type: {}, Version: {}",
             self.frame_version, self.frame_type, self.version
         )
         .expect("KafkaRecordFeature write failed 1");
 
-        write!(
+        writeln!(
             &mut msg,
-            "Name length: {}, Name: {:?}\n",
+            "Name length: {}, Name: {:?}",
             self.name_length, self.name
         )
         .expect("KafkaRecordFeature write failed 1");
 
-        write!(
+        writeln!(
             &mut msg,
-            "feature level: {}, tagged field count: {}\n",
+            "feature level: {}, tagged field count: {}",
             self.feature_level, self.tagged_field_count
         )
         .expect("KafkaRecordFeature write failed 1");
-        write!(f, "{}", msg)
+        writeln!(f, "{}", msg)
     }
 }
 
@@ -517,27 +540,27 @@ pub struct KafkaRecordTopicRecord {
 impl std::fmt::Display for KafkaRecordTopicRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut msg = String::new();
-        write!(
+        writeln!(
             &mut msg,
-            "Frame version: {}, Frame Type: {}, Version: {}\n",
+            "Frame version: {}, Frame Type: {}, Version: {}",
             self.frame_version, self.frame_type, self.version
         )
         .expect("KafkaRecordFeature write failed 1");
 
-        write!(
+        writeln!(
             &mut msg,
-            "Name length: {}, topic Name: {:?}\n",
+            "Name length: {}, topic Name: {:?}",
             self.name_length, self.topic_name
         )
         .expect("KafkaRecordFeature write failed 1");
 
-        write!(
+        writeln!(
             &mut msg,
-            "topic UUID: {:?}, tagged field count: {}\n",
+            "topic UUID: {:?}, tagged field count: {}",
             self.topic_uuid, self.tagged_field_count
         )
         .expect("KafkaRecordFeature write failed 1");
-        write!(f, "{}", msg)
+        writeln!(f, "{}", msg)
     }
 }
 
@@ -579,26 +602,16 @@ impl KafkaRecordTopicRecord {
         Ok(rec)
     }
 
+    // Only value (name) is part of record response
     fn size(&self) -> usize {
-        size_of(&self.frame_version)
-            + size_of(&self.frame_type)
-            + size_of(&self.version)
-            + size_of(&self.name_length)
-            + size_of(&self.topic_name)
-            + size_of(&self.topic_uuid)
-            + size_of(&self.tagged_field_count)
+        self.topic_name.len() + 1
+        //size_of(&self.tagged_field_count)
     }
 
     pub fn serialize<W: std::io::Write>(&self, resp: &mut W) -> errors::Result<()> {
-        writer::write_bytes(resp, &self.frame_version)?;
-        writer::write_bytes(resp, &self.frame_type)?;
-        writer::write_bytes(resp, &self.version)?;
-        // TODO - check me - what's the best way to encode
-        writer::write_varint(resp, self.name_length as usize)?;
         writer::write_compact_string(resp, &self.topic_name)?;
 
-        writer::write_bytes(resp, &self.topic_uuid)?;
-        writer::write_varint(resp, self.tagged_field_count as usize)?;
+        //writer::write_varint(resp, self.tagged_field_count as usize)?;
         Ok(())
     }
 }
@@ -628,59 +641,55 @@ pub struct KafkaRecordPartitionRecord {
 impl std::fmt::Display for KafkaRecordPartitionRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut msg = String::new();
-        write!(
+        writeln!(
             &mut msg,
-            "Frame version: {}, Frame Type: {}, Version: {}\n",
+            "Frame version: {}, Frame Type: {}, Version: {}",
             self.frame_version, self.frame_type, self.version
         )
         .expect("KafkaRecordPartitionRecord failed 1");
 
-        write!(
+        writeln!(
             &mut msg,
-            "Partition ID: {}, topic UUID: {:?}\n",
+            "Partition ID: {}, topic UUID: {:?}",
             self.partition_id, self.topic_uuid
         )
         .expect("KafkaRecordPartitionRecord write failed 2");
 
-        write!(
+        writeln!(
             &mut msg,
-            "replica array length: {}, replica array: {:?}\n",
+            "replica array length: {}, replica array: {:?}",
             self.replica_array_length, self.replica_array
         )
         .expect("KafkaRecordPartitionRecord write failed 3");
 
-        write!(
+        writeln!(
             &mut msg,
-            "insync replica array length: {}, insync replica array: {:?}\n",
+            "insync replica array length: {}, insync replica array: {:?}",
             self.insync_replica_array_length, self.insync_replica_array
         )
         .expect("KafkaRecordPartitionRecord write failed 4");
 
-        write!(
+        writeln!(
             &mut msg,
-            "removing replica array length: {}, adding replica array length: {}\n",
+            "removing replica array length: {}, adding replica array length: {}",
             self.removing_replica_array_length, self.adding_replica_array_length
         )
         .expect("KafkaRecordPartitionRecord write failed 5");
 
-        write!(
+        writeln!(
             &mut msg,
-            "leader: {}, leader epoch: {}, partition_epoch: {}, dir length: {}\n",
+            "leader: {}, leader epoch: {}, partition_epoch: {}, dir length: {}",
             self.leader, self.leader_epoch, self.partition_epoch, self.dir_array_length
         )
         .expect("KafkaRecordPartitionRecord write failed 6");
 
         for i in 0..self.dir_array_length {
-            write!(&mut msg, "Dir {}: {:?}\n", i, self.dir_array[i as usize])
+            writeln!(&mut msg, "Dir {}: {:?}", i, self.dir_array[i as usize])
                 .expect("KafkaRecordPartitionRecord write failed 7");
         }
 
-        write!(
-            &mut msg,
-            "tagged field count: {}\n",
-            self.tagged_field_count
-        )
-        .expect("KafkaRecordPartitionRecord write failed 8");
+        writeln!(&mut msg, "tagged field count: {}", self.tagged_field_count)
+            .expect("KafkaRecordPartitionRecord write failed 8");
 
         write!(f, "{}", msg)
     }

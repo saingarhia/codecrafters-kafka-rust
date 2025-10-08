@@ -67,7 +67,6 @@ pub fn read_byte<R: Read>(req: &mut R) -> errors::Result<i8> {
 }
 pub fn tag_buffer<R: Read>(req: &mut R) -> errors::Result<()> {
     let _v = read_byte(req)?;
-    println!("tagged buffer read: {}", _v);
     Ok(())
 }
 
