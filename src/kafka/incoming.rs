@@ -95,13 +95,18 @@ impl Request {
                         .iter()
                         .enumerate()
                         .map(|(topic_idx, t)| {
-                            let topic = metadata.get_topic(u128::from_be_bytes(
-                                t.clone()
-                                    .try_into()
-                                    .expect("topic vector to be 16 bytes in length!"),
-                            ));
-                            println!("============== foudn topic: {topic:?}");
+                            let tt = t.iter().enumerate().fold([0_u8; 16], |mut acc, (idx, b)| {
+                                acc[idx] = *b;
+                                acc
+                            });
+                            let topic = metadata.get_topic(u128::from_be_bytes(tt));
+                            println!("============== found topic: {topic:?}");
                             let uuid = topic.map(|tt| tt.uuid_u128).unwrap_or(0);
+                            println!(
+                                "Topic option contains a topic: {} with UUID: {}",
+                                topic.is_some(),
+                                uuid
+                            );
                             let partition = metadata.partition_map.get(&uuid);
                             partitions::Topic {
                                 error_code: if topic.is_some() { 0 } else { 3 },
@@ -121,7 +126,7 @@ impl Request {
                                     };
                                     partitions_included += pps_to_include;
                                     for i in 0..pps_to_include {
-                                        //p.response_partition_limit {
+                                        //p.response_partition_limit
                                         ps.push(partitions::Partition {
                                             error_code: 0,
                                             partition_index: pp[i].partition_id as u32,
@@ -144,6 +149,9 @@ impl Request {
                     next_cursor: None,
                     tag_buffer: 0,
                 };
+                println!("======================================== response ==============================");
+                println!("{:?}", pr);
+                println!("================================================================================");
                 pr.serialize(response)?;
             }
         }

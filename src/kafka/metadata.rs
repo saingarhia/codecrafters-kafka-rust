@@ -10,7 +10,7 @@ use super::records;
 pub type LogBatchRecords = Vec<records::RecordsBatch>;
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct TopicMetadata {
     pub uuid: [u8; 16],
     pub uuid_u128: u128,
@@ -20,7 +20,7 @@ pub struct TopicMetadata {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PartitionMetadata {
     pub partition_id: i32,
     pub record_id1: usize,
@@ -28,7 +28,7 @@ pub struct PartitionMetadata {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Metadata {
     pub topic_map: HashMap<u128, TopicMetadata>,
     pub partition_map: HashMap<u128, Vec<PartitionMetadata>>,
@@ -37,9 +37,15 @@ pub struct Metadata {
 
 impl Metadata {
     pub fn new(filename: &str) -> errors::Result<Self> {
-        let f = File::open(filename)?;
-        let mut reader = BufReader::new(f);
-        Self::decode(&mut reader)
+        if let Ok(f) = File::open(filename) {
+            let mut reader = BufReader::new(f);
+            Self::decode(&mut reader)
+        } else {
+            println!("File not found!! - generating dummy Metadata!");
+            Ok(Self {
+                ..Default::default()
+            })
+        }
     }
 
     fn decode<R: Read>(buffer: &mut R) -> errors::Result<Self> {

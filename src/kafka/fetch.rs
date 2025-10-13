@@ -277,7 +277,7 @@ impl FetchResponsePartition {
             //self.records.iter().try_for_each(|t| t.serialize(resp))?;
         } else {
             // hard code 2 records for now
-            writer::write_bytes(resp, &2_u8)?;
+            writer::write_varint(resp, 1 + self.records.len())?;
             resp.write_all(&self.records)?;
         }
         writer::write_bytes(resp, &self.tag_buffer)?;

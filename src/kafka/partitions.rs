@@ -104,24 +104,26 @@ pub struct Topic {
     pub name: Option<Vec<u8>>,
     pub topic_id: u128,
     pub is_internal: bool,
-    pub tag_buffer: u8,
     pub partitions: Vec<Partition>,
     pub topic_authorized_operations: u32,
+    pub tag_buffer: u8,
 }
 
 impl Topic {
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         writer::write_bytes(resp, &self.error_code)?;
         writer::write_nullable_compact_string(resp, self.name.as_deref())?;
+
+        // TODO: not sure why decoder needs this additional 4 byte block??
+        //writer::write_bytes(resp, &0_u32)?;
+
         writer::write_bytes(resp, &self.topic_id)?;
-        // TAG BUFFER ?? todo - check
-        //writer::write_bytes(resp, &self.tag_buffer)?;
         writer::write_bool(resp, self.is_internal)?;
-        writer::write_varint(resp, self.partitions.len() + 1)?;
+        writer::write_varint(resp, self.partitions.len())?;
         self.partitions.iter().try_for_each(|p| p.serialize(resp))?;
         writer::write_bytes(resp, &self.topic_authorized_operations)?;
         // tag buffer
-        writer::write_varint(resp, 0)?;
+        writer::write_varint(resp, self.tag_buffer as usize)?;
         Ok(())
     }
 }

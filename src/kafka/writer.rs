@@ -56,6 +56,7 @@ pub fn write_varint<W: Write>(resp: &mut W, val: usize) -> errors::Result<()> {
     write_bytes(resp, &(val as u8))
 }
 
+#[allow(dead_code)]
 pub fn write_varint_main<W: Write>(resp: &mut W, x: i32) -> errors::Result<()> {
     let mut ux = (x as u64) << 1;
     if x < 0 {

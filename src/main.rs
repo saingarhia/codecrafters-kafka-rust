@@ -55,7 +55,7 @@ fn process_connection(
             .enumerate()
             .for_each(|(idx, v)| response[idx] = v);
 
-        let _ = stream.write_all(&response[..message_size as usize + 4])?; // 4 bytes for message size
+        stream.write_all(&response[..message_size as usize + 4])?; // 4 bytes for message size
     }
     let _ = stream.shutdown(Shutdown::Both);
     Ok(())

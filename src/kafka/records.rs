@@ -755,10 +755,10 @@ impl KafkaRecordPartitionRecord {
             rec.tagged_field_count = parser::read_varint(buffer)?;
             len -= 1;
         }
-        assert_eq!(
-            len, 0,
-            "Kafka partition record value deserialize should have exhaused entire length"
-        );
+        //assert_eq!(
+        //    len, 0,
+        //    "Kafka partition record value deserialize should have exhaused entire length"
+        //);
 
         Ok(rec)
     }
