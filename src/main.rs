@@ -69,9 +69,23 @@ fn process_tcp() -> kafka::errors::Result<()> {
     let listener = TcpListener::bind("127.0.0.1:9092")?;
     println!("Listening on {}", listener.local_addr()?);
 
+    // The main loop for accepting connections should not die on a single error.
     for stream in listener.incoming() {
-        let mclone = Arc::clone(&metadata);
-        thread::spawn(move || process_connection(stream?, mclone));
+        match stream {
+            Ok(stream) => {
+                println!("Accepted new connection.");
+                let mclone = Arc::clone(&metadata);
+                // Handle errors within the thread to prevent panics from taking down the server.
+                thread::spawn(move || {
+                    if let Err(e) = process_connection(stream, mclone) {
+                        println!("Error processing connection: {}", e);
+                    }
+                });
+            }
+            Err(e) => {
+                println!("Error accepting connection: {}", e);
+            }
+        }
     }
     Ok(())
 }
