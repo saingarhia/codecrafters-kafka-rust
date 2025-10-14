@@ -261,16 +261,11 @@ impl KafkaRecord {
         let offset_delta = parser::read_varint(&mut record_cursor)? as i8; // Assuming it fits
         let key_length = parser::read_varint(&mut record_cursor)? as i8;
         let mut key = vec![];
-        if rec.key_length > 0 {
+        if key_length > 0 {
             key = vec![0_u8; key_length as usize];
             record_cursor.read_exact(&mut key)?;
         }
 
-        //assert_eq!(rec.key_length, -1);
-        rec.value_length = parser::read_varint(buffer)?;
-        if rec.value_length > 0 {
-            rec.value = KafkaRecordValue::deserialize(buffer, rec.value_length as usize)?;
-        }
         let value_length = parser::read_varint(&mut record_cursor)?;
         let value = if value_length > 0 {
             KafkaRecordValue::deserialize(&mut record_cursor, value_length as usize)?
@@ -282,8 +277,16 @@ impl KafkaRecord {
         // Header parsing logic would go here if needed
 
         Ok(Self {
-            length, attributes, timestamp_delta, offset_delta, key_length, key,
-            value_length, value, header_count, headers: vec![],
+            length: length as i8,
+            attributes,
+            timestamp_delta,
+            offset_delta,
+            key_length,
+            key,
+            value_length: value_length as i8,
+            value,
+            header_count,
+            headers: vec![],
         })
     }
 
