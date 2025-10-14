@@ -93,61 +93,36 @@ impl Request {
                     topics: p
                         .topics
                         .iter()
-                        .enumerate()
-                        .map(|(topic_idx, t)| {
-                            let tt = t.iter().enumerate().fold([0_u8; 16], |mut acc, (idx, b)| {
-                                acc[idx] = *b;
-                                acc
-                            });
-                            let topic = metadata.get_topic(u128::from_be_bytes(tt));
+                        .map(|topic_name| {
+                            let topic = metadata.get_topic_by_name(topic_name);
                             println!("============== found topic: {topic:?}");
                             let uuid = topic.map(|tt| tt.uuid_u128).unwrap_or(0);
-                            println!(
-                                "Topic option contains a topic: {} with UUID: {}",
-                                topic.is_some(),
-                                uuid
-                            );
                             let partition = metadata.partition_map.get(&uuid);
                             partitions::Topic {
                                 error_code: if topic.is_some() { 0 } else { 3 },
-                                name: Some(t.clone()),
-                                topic_id: uuid,
-                                is_internal: false,
-                                tag_buffer: 0,
+                                name: topic_name.clone(),
                                 partitions: partition.map_or(vec![], |pp| {
                                     let mut ps = vec![];
-                                    let pps_to_include = if topic_idx == topics_length - 1 {
-                                        pp.len()
-                                    } else {
-                                        pp.len().min(
-                                            p.response_partition_limit as usize
-                                                - partitions_included,
-                                        )
-                                    };
+                                    let pps_to_include =
+                                        pp.len().min(p.response_partition_limit as usize - partitions_included);
                                     partitions_included += pps_to_include;
                                     for i in 0..pps_to_include {
                                         //p.response_partition_limit
                                         ps.push(partitions::Partition {
                                             error_code: 0,
-                                            partition_index: pp[i].partition_id as u32,
+                                            partition_index: pp[i].partition_id,
                                             leader_id: 0,
                                             leader_epoch: 0,
                                             replica_nodes: vec![],
                                             isr_nodes: vec![],
-                                            eligible_leader_replicas: vec![],
-                                            last_known_elr: vec![],
                                             offline_replicas: vec![],
-                                            tag_buffer: 0,
                                         });
                                     }
                                     ps
                                 }),
-                                topic_authorized_operations: 0x1234,
                             }
                         })
                         .collect(),
-                    next_cursor: None,
-                    tag_buffer: 0,
                 };
                 println!("======================================== response ==============================");
                 println!("{:?}", pr);

@@ -129,6 +129,11 @@ impl Metadata {
     }
 
     #[allow(dead_code)]
+    pub fn get_topic_by_name(&self, topic_name: &str) -> Option<&TopicMetadata> {
+        self.topic_map.values().find(|t| t.topic_name == topic_name)
+    }
+
+    #[allow(dead_code)]
     pub fn get_partition() -> PartitionMetadata {
         todo!()
     }
