@@ -96,16 +96,13 @@ impl Metadata {
                             .or_insert(meta);
                     }
                     kafka::records::KafkaRecordValue::KafkaRecordPartitionType(v) => {
-                        let meta = vec![PartitionMetadata {
+                        let meta = PartitionMetadata {
                             partition_id: v.partition_id,
                             record_id1: i,
                             record_id2: r2,
-                        }];
+                        };
                         let uuid = u128::from_be_bytes(v.topic_uuid);
-                        partition_map
-                            .entry(uuid)
-                            .and_modify(|v| *v = meta.clone())
-                            .or_insert(meta);
+                        partition_map.entry(uuid).or_default().push(meta);
                     }
                     _ => (),
                 });
