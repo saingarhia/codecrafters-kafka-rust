@@ -142,6 +142,7 @@ impl RecordsBatch {
         Ok((crc32c(&buf[0..batch_length as usize]), batch_length))
     }
 
+    #[allow(dead_code)]
     pub fn serialize<W: std::io::Write>(&self, resp: &mut W) -> errors::Result<()> {
         //let (crc, batch_length) = self.calc_meta()?;
         //println!(
@@ -172,6 +173,7 @@ impl RecordsBatch {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn size(&self) -> usize {
         //size_of(&self.base_offset)
         //    + size_of(&self.batch_length)

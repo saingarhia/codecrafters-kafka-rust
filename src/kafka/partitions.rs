@@ -71,27 +71,26 @@ impl Partition {
         writer::write_bytes(resp, &self.partition_index)?;
         writer::write_bytes(resp, &self.leader_id)?;
         writer::write_bytes(resp, &self.leader_epoch)?;
-        writer::write_uvarint(resp, (self.replica_nodes.len() + 1) as i32)?;
+        writer::write_bytes(resp, &(self.replica_nodes.len() as i32))?;
         self.replica_nodes
             .iter()
             .try_for_each(|rn| writer::write_bytes(resp, rn))?;
-        writer::write_uvarint(resp, (self.isr_nodes.len() + 1) as i32)?;
+        writer::write_bytes(resp, &(self.isr_nodes.len() as i32))?;
         self.isr_nodes
             .iter()
             .try_for_each(|inn| writer::write_bytes(resp, inn))?;
-        writer::write_uvarint(resp, (self.eligible_leader_replicas.len() + 1) as i32)?;
+        writer::write_bytes(resp, &(self.eligible_leader_replicas.len() as i32))?;
         self.eligible_leader_replicas
             .iter()
             .try_for_each(|elr| writer::write_bytes(resp, elr))?;
-        writer::write_uvarint(resp, (self.last_known_elr.len() + 1) as i32)?;
+        writer::write_bytes(resp, &(self.last_known_elr.len() as i32))?;
         self.last_known_elr
             .iter()
             .try_for_each(|elr| writer::write_bytes(resp, elr))?;
-        writer::write_varint(resp, self.offline_replicas.len() + 1)?;
+        writer::write_bytes(resp, &(self.offline_replicas.len() as i32))?;
         self.offline_replicas
             .iter()
             .try_for_each(|or| writer::write_bytes(resp, or))?;
-        writer::write_bytes(resp, &self.tag_buffer)?;
         Ok(())
     }
 }
@@ -112,18 +111,19 @@ pub struct Topic {
 impl Topic {
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         writer::write_bytes(resp, &self.error_code)?;
-        writer::write_nullable_compact_string(resp, self.name.as_deref())?;
-
-        // TODO: not sure why decoder needs this additional 4 byte block??
-        //writer::write_bytes(resp, &0_u32)?;
+        if let Some(name) = &self.name {
+            writer::write_bytes(resp, &(name.len() as i16))?;
+            resp.write_all(name)?;
+        } else {
+            writer::write_bytes(resp, &(-1_i16))?;
+        }
 
         writer::write_bytes(resp, &self.topic_id)?;
         writer::write_bool(resp, self.is_internal)?;
-        writer::write_uvarint(resp, (self.partitions.len() + 1) as i32)?;
+        writer::write_bytes(resp, &(self.partitions.len() as i32))?;
         self.partitions.iter().try_for_each(|p| p.serialize(resp))?;
         writer::write_bytes(resp, &self.topic_authorized_operations)?;
-        // tag buffer
-        writer::write_varint(resp, self.tag_buffer as usize)?;
+        // No tag buffer for v0
         Ok(())
     }
 }
@@ -137,6 +137,7 @@ pub struct NextCursor {
 }
 
 impl NextCursor {
+    #[allow(dead_code)]    
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         writer::write_compact_string(resp, &self.topic_name)?;
         writer::write_bytes(resp, &self.partition_index)?;
@@ -163,10 +164,10 @@ impl PartitionsResponse {
         self.topics
             .iter()
             .try_for_each(|topic| topic.serialize(resp))?;
-        match self.next_cursor.as_ref() {
-            Some(c) => c.serialize(resp)?,
-            None => writer::write_null(resp)?,
-        }
-        writer::write_bytes(resp, &self.tag_buffer)
+        // NextCursor is not part of v0.
+        // The field is TopicAuthorizedOperations, which is inside Topic.
+        // There are no fields after the topics array in v0.
+        // The original hexdump shows ff 00 which is incorrect.
+        Ok(())
     }
 }
