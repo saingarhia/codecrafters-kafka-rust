@@ -71,19 +71,19 @@ impl Partition {
         writer::write_bytes(resp, &self.partition_index)?;
         writer::write_bytes(resp, &self.leader_id)?;
         writer::write_bytes(resp, &self.leader_epoch)?;
-        writer::write_varint(resp, self.replica_nodes.len() + 1)?;
+        writer::write_uvarint(resp, (self.replica_nodes.len() + 1) as i32)?;
         self.replica_nodes
             .iter()
             .try_for_each(|rn| writer::write_bytes(resp, rn))?;
-        writer::write_varint(resp, self.isr_nodes.len() + 1)?;
+        writer::write_uvarint(resp, (self.isr_nodes.len() + 1) as i32)?;
         self.isr_nodes
             .iter()
             .try_for_each(|inn| writer::write_bytes(resp, inn))?;
-        writer::write_varint(resp, self.eligible_leader_replicas.len() + 1)?;
+        writer::write_uvarint(resp, (self.eligible_leader_replicas.len() + 1) as i32)?;
         self.eligible_leader_replicas
             .iter()
             .try_for_each(|elr| writer::write_bytes(resp, elr))?;
-        writer::write_varint(resp, self.last_known_elr.len() + 1)?;
+        writer::write_uvarint(resp, (self.last_known_elr.len() + 1) as i32)?;
         self.last_known_elr
             .iter()
             .try_for_each(|elr| writer::write_bytes(resp, elr))?;
@@ -119,7 +119,7 @@ impl Topic {
 
         writer::write_bytes(resp, &self.topic_id)?;
         writer::write_bool(resp, self.is_internal)?;
-        writer::write_varint(resp, self.partitions.len())?;
+        writer::write_uvarint(resp, (self.partitions.len() + 1) as i32)?;
         self.partitions.iter().try_for_each(|p| p.serialize(resp))?;
         writer::write_bytes(resp, &self.topic_authorized_operations)?;
         // tag buffer
@@ -159,7 +159,7 @@ pub struct PartitionsResponse {
 impl PartitionsResponse {
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         writer::write_bytes(resp, &self.throttle_ms)?;
-        writer::write_varint(resp, self.topics.len() + 1)?;
+        writer::write_bytes(resp, &(self.topics.len() as i32))?;
         self.topics
             .iter()
             .try_for_each(|topic| topic.serialize(resp))?;

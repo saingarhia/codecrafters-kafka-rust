@@ -5,7 +5,7 @@ use std::io::{BufReader, Read};
 
 use crate::kafka::parser;
 
-use super::records;
+use super::{records, ErrorCodes};
 
 pub type LogBatchRecords = Vec<records::RecordsBatch>;
 
@@ -55,10 +55,22 @@ impl Metadata {
 
         loop {
             match records::RecordsBatch::deserialize(buffer) {
-                Ok(record) => records.push(record),
+                Ok(record) => {
+                    if record.batch_length == 0 {
+                        // Likely an empty read at the end of the file
+                        break;
+                    }
+                    records.push(record)
+                }
                 Err(e) => {
-                    println!("Not able to read more records - error: {e:?}");
-                    break;
+                    if let Some(io_err) = e.downcast_ref::<std::io::Error>() {
+                        if io_err.kind() == std::io::ErrorKind::UnexpectedEof {
+                            // Clean end of file
+                            break;
+                        }
+                    }
+                    // For any other error, we propagate it.
+                    return Err(e);
                 }
             }
         }

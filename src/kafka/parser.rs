@@ -70,18 +70,25 @@ pub fn tag_buffer<R: Read>(req: &mut R) -> errors::Result<()> {
     Ok(())
 }
 
-pub fn read_varint<R: Read>(req: &mut R) -> errors::Result<i8> {
-    let mut buffer = [0u8; 1];
-    req.read_exact(&mut buffer)?;
-    let x = i8::from_be_bytes(buffer);
-    if x < 0 {
-        let mut buffer = [0u8; 1];
-        req.read_exact(&mut buffer)?;
-        let y = (x as u8) as i16;
-        let c = (y >> 1) ^ -(y & 1);
-        return Ok(c as i8);
+pub fn read_varint<R: Read>(req: &mut R) -> errors::Result<i32> {
+    let mut res: u32 = 0;
+    let mut shift = 0;
+    let mut i = 0;
+    loop {
+        let mut buf = [0; 1];
+        req.read_exact(&mut buf)?;
+        let b = buf[0];
+        res |= ((b & 0x7f) as u32) << shift;
+        shift += 7;
+        i += 1;
+        if (b & 0x80) == 0 {
+            break;
+        }
+        if i >= 5 {
+            return Err(errors::KafkaErrors::InvalidWriterArg("Varint is too long".to_string()).into());
+        }
     }
-    Ok((x >> 1) ^ -(x & 1)) //zigzag decode
+    Ok(((res >> 1) as i32) ^ -((res & 1) as i32)) // zigzag decode
 }
 
 #[allow(dead_code)]

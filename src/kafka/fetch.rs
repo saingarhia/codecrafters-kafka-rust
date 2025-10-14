@@ -240,9 +240,7 @@ impl FetchResponsePartition {
             topic_meta.topic_name, partition
         );
 
-        println!("***************** LOG FILE: {log_file_name} ********************");
         let records = std::fs::read(log_file_name).unwrap();
-        println!("Read {} bytes from this file!", records.len());
         Self {
             aborted_transactions,
             //error_code: 0, //FETCH_RESPONSE_UNKNOWN_TOPIC,

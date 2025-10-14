@@ -247,27 +247,23 @@ impl KafkaRecord {
     }
 
     pub fn deserialize<R: Read>(buffer: &mut R) -> errors::Result<Self> {
-        let mut rec = Self {
-            ..Default::default()
-        };
-
-        rec.length = parser::read_varint(buffer)?;
-        println!("record len: {:?}", rec.length);
-        if rec.length <= 0 {
-            println!(
-                "============== found record length of 0 - can't read anymore for this record!"
-            );
-            return Ok(rec);
+        let length = parser::read_varint(buffer)?;
+        if length <= 0 {
+            return Err(errors::KafkaErrors::InvalidWriterArg("Invalid record length".to_string()).into());
         }
 
-        rec.attributes = parser::read_byte(buffer)?;
-        rec.timestamp_delta = parser::read_byte(buffer)?;
-        rec.offset_delta = parser::read_byte(buffer)?;
-        rec.key_length = parser::read_varint(buffer)?;
+        let mut record_data = vec![0u8; length as usize];
+        buffer.read_exact(&mut record_data)?;
+        let mut record_cursor = std::io::Cursor::new(record_data);
+
+        let attributes = parser::read_byte(&mut record_cursor)?;
+        let timestamp_delta = parser::read_varint(&mut record_cursor)? as i8; // Assuming it fits
+        let offset_delta = parser::read_varint(&mut record_cursor)? as i8; // Assuming it fits
+        let key_length = parser::read_varint(&mut record_cursor)? as i8;
+        let mut key = vec![];
         if rec.key_length > 0 {
-            let mut key = vec![0_u8; rec.key_length as usize];
-            buffer.read_exact(&mut key)?;
-            rec.key = key;
+            key = vec![0_u8; key_length as usize];
+            record_cursor.read_exact(&mut key)?;
         }
 
         //assert_eq!(rec.key_length, -1);
@@ -275,7 +271,20 @@ impl KafkaRecord {
         if rec.value_length > 0 {
             rec.value = KafkaRecordValue::deserialize(buffer, rec.value_length as usize)?;
         }
-        Ok(rec)
+        let value_length = parser::read_varint(&mut record_cursor)?;
+        let value = if value_length > 0 {
+            KafkaRecordValue::deserialize(&mut record_cursor, value_length as usize)?
+        } else {
+            KafkaRecordValue::Invalid
+        };
+
+        let header_count = parser::read_varint(&mut record_cursor)? as i8;
+        // Header parsing logic would go here if needed
+
+        Ok(Self {
+            length, attributes, timestamp_delta, offset_delta, key_length, key,
+            value_length, value, header_count, headers: vec![],
+        })
     }
 
     fn size(&self) -> usize {
@@ -379,13 +388,14 @@ impl KafkaRecordValue {
         let frame_type = parser::read_byte(buffer)?;
         let version = parser::read_byte(buffer)?;
         println!(
-            "frame version: {}, frame type: {}, version: {}, data_len: {}\n",
+            "frame version: {}, frame type: {}, version: {}, data_len: {}",
             frame_version, frame_type, version, data_len
         );
+        let mut value_reader = buffer.take(data_len as u64 - 3); // -3 for the fields we just read
         match frame_type {
             KAFKA_RECORDTYPE_FEATURE => {
                 // feature record
-                let mut rec = KafkaRecordFeature::deserialize(buffer, data_len - 3)?;
+                let mut rec = KafkaRecordFeature::deserialize(&mut value_reader)?;
                 rec.frame_version = frame_version;
                 rec.frame_type = frame_type;
                 rec.version = version;
@@ -393,7 +403,7 @@ impl KafkaRecordValue {
             }
             KAFKA_RECORDTYPE_TOPIC => {
                 // topic record
-                let mut rec = KafkaRecordTopicRecord::deserialize(buffer, data_len - 3)?;
+                let mut rec = KafkaRecordTopicRecord::deserialize(&mut value_reader)?;
                 rec.frame_version = frame_version;
                 rec.frame_type = frame_type;
                 rec.version = version;
@@ -401,7 +411,7 @@ impl KafkaRecordValue {
             }
             KAFKA_RECORDTYPE_PARTITION => {
                 // partition record
-                let mut rec = KafkaRecordPartitionRecord::deserialize(buffer, data_len - 3)?;
+                let mut rec = KafkaRecordPartitionRecord::deserialize(&mut value_reader)?;
                 rec.frame_version = frame_version;
                 rec.frame_type = frame_type;
                 rec.version = version;
@@ -477,29 +487,16 @@ impl KafkaRecordFeature {
         }
     }
 
-    pub fn deserialize<R: Read>(buffer: &mut R, mut len: usize) -> errors::Result<Self> {
+    pub fn deserialize<R: Read>(buffer: &mut R) -> errors::Result<Self> {
         let mut rec = Self {
             ..Default::default()
         };
 
-        if len > 0 {
-            rec.name = parser::read_compact_string(buffer)?;
-            rec.name_length = rec.name.len() as u8;
-            len -= 1 + rec.name.len();
-        }
+        rec.name = parser::read_compact_string(buffer)?;
+        rec.name_length = rec.name.len() as u8;
+        rec.feature_level = parser::read_short(buffer)?;
+        rec.tagged_field_count = parser::read_varint(buffer)? as i8;
 
-        if len >= 2 {
-            rec.feature_level = parser::read_short(buffer)?;
-            len -= 2;
-        }
-        if len >= 1 {
-            rec.tagged_field_count = parser::read_varint(buffer)?;
-            len -= 1;
-        }
-        assert_eq!(
-            len, 0,
-            "Kafka record value deserialize should have exhaused entire length"
-        );
         Ok(rec)
     }
 
@@ -572,32 +569,19 @@ impl KafkaRecordTopicRecord {
         }
     }
 
-    pub fn deserialize<R: Read>(buffer: &mut R, mut len: usize) -> errors::Result<Self> {
+    pub fn deserialize<R: Read>(buffer: &mut R) -> errors::Result<Self> {
         let mut rec = Self {
             ..Default::default()
         };
 
-        if len > 0 {
-            rec.topic_name = parser::read_compact_string(buffer)?;
-            rec.name_length = rec.topic_name.len() as u8;
-            len -= 1 + rec.name_length as usize;
-        }
+        rec.topic_name = parser::read_compact_string(buffer)?;
+        rec.name_length = rec.topic_name.len() as u8;
 
-        if len > 16 {
-            buffer
-                .read_exact(&mut rec.topic_uuid)
-                .expect("Failed to read from buffer!");
-            len -= 16;
-        }
+        buffer
+            .read_exact(&mut rec.topic_uuid)
+            .expect("Failed to read from buffer!");
 
-        if len >= 1 {
-            rec.tagged_field_count = parser::read_varint(buffer)?;
-            len -= 1;
-        }
-        assert_eq!(
-            len, 0,
-            "Kafka record value deserialize should have exhaused entire length"
-        );
+        rec.tagged_field_count = parser::read_varint(buffer)? as i8;
 
         Ok(rec)
     }
@@ -704,61 +688,41 @@ impl KafkaRecordPartitionRecord {
         }
     }
 
-    pub fn deserialize<R: Read>(buffer: &mut R, mut len: usize) -> errors::Result<Self> {
+    pub fn deserialize<R: Read>(buffer: &mut R) -> errors::Result<Self> {
         let mut rec = Self {
             ..Default::default()
         };
         rec.partition_id = parser::read_int(buffer)?;
-        len -= 4;
         buffer
             .read_exact(&mut rec.topic_uuid)
             .expect("Failed to deserialize topic uuid!");
-        len -= 16;
-        rec.replica_array_length = parser::read_varint(buffer)?;
-        len -= 1;
+        rec.replica_array_length = parser::read_varint(buffer)? as i8;
         rec.replica_array = vec![0_i32; rec.replica_array_length as usize];
         for i in 0..rec.replica_array_length as usize {
             rec.replica_array[i] = parser::read_int(buffer)?;
-            len -= 4;
         }
 
-        rec.insync_replica_array_length = parser::read_varint(buffer)?;
-        len -= 1;
+        rec.insync_replica_array_length = parser::read_varint(buffer)? as i8;
         rec.insync_replica_array = vec![0_i32; rec.insync_replica_array_length as usize];
         for i in 0..rec.insync_replica_array_length as usize {
             rec.insync_replica_array[i] = parser::read_int(buffer)?;
-            len -= 4;
         }
 
-        rec.removing_replica_array_length = parser::read_varint(buffer)?;
-        len -= 1;
-        rec.adding_replica_array_length = parser::read_varint(buffer)?;
-        len -= 1;
+        rec.removing_replica_array_length = parser::read_varint(buffer)? as i8;
+        rec.adding_replica_array_length = parser::read_varint(buffer)? as i8;
         rec.leader = parser::read_int(buffer)?;
-        len -= 4;
         rec.leader_epoch = parser::read_int(buffer)?;
-        len -= 4;
         rec.partition_epoch = parser::read_int(buffer)?;
-        len -= 4;
 
-        rec.dir_array_length = parser::read_varint(buffer)?;
-        len -= 1;
+        rec.dir_array_length = parser::read_varint(buffer)? as i8;
         rec.dir_array = vec![[0_u8; 16]; rec.dir_array_length as usize];
         for i in 0..rec.dir_array_length as usize {
             buffer
                 .read_exact(&mut rec.dir_array[i])
                 .expect("Failed to read directory array!");
-            len -= 16;
         }
 
-        if len > 1 {
-            rec.tagged_field_count = parser::read_varint(buffer)?;
-            len -= 1;
-        }
-        //assert_eq!(
-        //    len, 0,
-        //    "Kafka partition record value deserialize should have exhaused entire length"
-        //);
+        rec.tagged_field_count = parser::read_varint(buffer)? as i8;
 
         Ok(rec)
     }
