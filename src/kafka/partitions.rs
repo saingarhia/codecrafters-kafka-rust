@@ -6,40 +6,71 @@ use std::io::{self, Read, Write};
 pub struct Cursor {
     pub topic_name: Vec<u8>,
     pub partition_index: i32,
+    pub tag_buffer: u8,
+}
+
+impl Cursor {
+
+}
+
+#[derive(Debug, Clone)]
+pub struct TopicRequest {
+    pub name: String,
+    pub tag_buffer: u8,
+}
+
+impl TopicRequest {
+    #[allow(dead_code)]
+    pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
+        // Assuming COMPACT_STRING for name based on flexible version schemas
+        writer::write_compact_string(resp, self.name.as_bytes())?;
+        // Assuming tagged fields follow
+        writer::write_bytes(resp, &self.tag_buffer)?;
+        Ok(())
+    }
 }
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct PartitionsRequest {
-    pub topics: Vec<String>,
+    pub topics: Vec<TopicRequest>,
     pub response_partition_limit: i32,
+    pub cursor: Option<Cursor>,
 }
 
 impl PartitionsRequest {
     pub fn new<R: Read>(req: &mut R) -> errors::Result<Self> {
-        // For v0, array length is INT32
-        let topics_len = parser::read_int(req)?;
+        let topics_len = parser::read_byte(req)?;
         let mut topics = Vec::with_capacity(topics_len as usize);
-        for _ in 0..topics_len {
-            // For v0, string length is INT16
-            let name_len = parser::read_short(req)?;
-            if name_len > 0 {
-                let mut name_buf = vec![0u8; name_len as usize];
-                req.read_exact(&mut name_buf)?;
-                topics.push(String::from_utf8(name_buf)?);
-            } else {
-                // Handle null or empty string case if necessary
-                topics.push(String::new());
+        if topics_len > 0 {
+            for _ in 0..(topics_len - 1) {
+                // COMPACT_STRING for name
+                let name_buf = parser::read_compact_string(req)?;
+                let name = String::from_utf8(name_buf)?;
+                let tag_buffer = parser::read_byte(req)? as u8;
+                topics.push(TopicRequest { name, tag_buffer });
             }
         }
-        println!("Found {} topics!!: {:?}", topics.len(), topics);
-
         let response_partition_limit = parser::read_int(req)?;
-        println!("response partition limit: {}", response_partition_limit);
+        // Parse cursor
+        let len = parser::read_byte(req)?;       
+        let cursor = if len == 0xff_u8 as i8 {
+            let _tag_buffer = parser::read_byte(req)? as u8;
+            None
+        } else {
+            let partition_index = parser::read_int(req)?;
+            let tag_buffer = parser::read_byte(req)? as u8;
+            Some(Cursor {
+                topic_name: vec![], // TODO - must read name from the stream
+                partition_index,
+                tag_buffer,
+            })
+        };
 
         Ok(Self {
             topics,
             response_partition_limit,
+            cursor,
         })
     }
 }

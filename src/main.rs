@@ -15,47 +15,38 @@ fn process_connection(
     metadata: Arc<Mutex<kafka::metadata::Metadata>>,
 ) -> kafka::errors::Result<()> {
     let mut size = [0; 4];
-    let mut response = [0_u8; 1500]; // reuse
     loop {
         // lets read size of this request
-        let n = stream.read(&mut size)?;
-        if n <= 0 {
-            // close socket
-            println!("received {n} bytes, closing this socket!!");
-            break;
+        // Use read_exact to ensure all 4 bytes of the size are read.
+        if let Err(e) = stream.read_exact(&mut size) {
+            if e.kind() == io::ErrorKind::UnexpectedEof {
+                println!("Client disconnected.");
+                break; // Cleanly exit loop on disconnect.
+            }
+            return Err(e.into()); // Propagate other I/O errors.
         }
-        // else we received something, lets write back
-        println!("received {n} bytes on this tcp socket");
+
         let req_size = i32::from_be_bytes(size) as usize;
         println!("Request size is: {req_size}");
 
         let mut req_data = vec![0; req_size];
-        // lets read the reques
-        let n = stream.read(&mut req_data)?;
-        if n < req_size {
-            // close socket
-            println!("received {n} bytes, closing socket!!, expected: {req_size}");
-            // TODO - should implement cursor if request is not fully here
-            break;
-        }
+        // Also use read_exact for the request body.
+        stream.read_exact(&mut req_data)?;
+
         // process this request
         let mut req_reader = BufReader::new(&req_data[..]);
         let req_processor = kafka::incoming::Request::new(&mut req_reader)?;
         println!("Request processor: {:?}", req_processor);
-        // jump over the size field - populate it before sending on wire
-        let mut writer = BufWriter::new(&mut response[4..]);
-        req_processor.process(&mut writer, &metadata)?;
-        let message_size = writer.buffer().len() as u32;
-        // we do not writer any more
-        drop(writer);
 
-        message_size
-            .to_be_bytes()
-            .into_iter()
-            .enumerate()
-            .for_each(|(idx, v)| response[idx] = v);
+        // Use a dynamically sized Vec for the response buffer to avoid overflows.
+        let mut response_body_writer = BufWriter::new(Vec::new());
+        req_processor.process(&mut response_body_writer, &metadata)?;
+        let response_body = response_body_writer.into_inner()?;
+        let message_size = response_body.len() as u32;
 
-        stream.write_all(&response[..message_size as usize + 4])?; // 4 bytes for message size
+        // Write the size prefix followed by the response body.
+        stream.write_all(&message_size.to_be_bytes())?;
+        stream.write_all(&response_body)?;
     }
     let _ = stream.shutdown(Shutdown::Both);
     Ok(())

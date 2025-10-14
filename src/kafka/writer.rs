@@ -33,6 +33,7 @@ pub fn write_bytes<W: Write, T: KafkaWrite>(resp: &mut W, data: &T) -> errors::R
     data.write(resp)
 }
 
+#[allow(dead_code)]
 pub fn write_bool<W: Write>(resp: &mut W, val: bool) -> errors::Result<()> {
     (val as u8).write(resp)
 }

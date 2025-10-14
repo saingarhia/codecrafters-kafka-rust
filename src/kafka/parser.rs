@@ -7,7 +7,7 @@ pub fn read_uvarint<R: Read>(req: &mut R) -> errors::Result<u32> {
     let mut shift = 0;
     let mut i = 0;
     loop {
-        let mut buf = [0; 1];
+        let mut buf = [0_u8; 1];
         req.read_exact(&mut buf)?;
         let b = buf[0];
         res |= ((b & 0x7f) as u32) << shift;
@@ -34,6 +34,7 @@ pub fn read_compact_string<R: Read>(req: &mut R) -> errors::Result<Vec<u8>> {
     Ok(data)
 }
 
+#[allow(dead_code)]
 pub fn array<R: Read>(req: &mut R) -> errors::Result<Vec<Vec<u8>>> {
     let len = read_uvarint(req)?;
     if len == 0 {

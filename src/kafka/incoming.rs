@@ -87,20 +87,20 @@ impl Request {
 
                 let metadata = metadata.lock().unwrap();
                 let mut partitions_included = 0;
-                let topics_length = p.topics.len();
+                let _topics_length = p.topics.len();
                 let pr = partitions::PartitionsResponse {
                     throttle_ms: 0,
                     topics: p
                         .topics
                         .iter()
                         .map(|topic_name| {
-                            let topic = metadata.get_topic_by_name(topic_name);
+                            let topic = metadata.get_topic_by_name(&topic_name.name);
                             println!("============== found topic: {topic:?}");
                             let uuid = topic.map(|tt| tt.uuid_u128).unwrap_or(0);
                             let partition = metadata.partition_map.get(&uuid);
                             partitions::Topic {
                                 error_code: if topic.is_some() { 0 } else { 3 },
-                                name: topic_name.clone(),
+                                name: topic_name.name.clone(),
                                 partitions: partition.map_or(vec![], |pp| {
                                     let mut ps = vec![];
                                     let pps_to_include =
