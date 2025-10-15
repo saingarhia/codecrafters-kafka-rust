@@ -101,10 +101,13 @@ impl Request {
                             partitions::Topic {
                                 error_code: if topic.is_some() { 0 } else { 3 },
                                 name: topic_name.name.clone(),
+                                topic_id: uuid,
+                                is_internal: false,
                                 partitions: partition.map_or(vec![], |pp| {
                                     let mut ps = vec![];
-                                    let pps_to_include =
-                                        pp.len().min(p.response_partition_limit as usize - partitions_included);
+                                    let pps_to_include = pp.len().min(
+                                        p.response_partition_limit as usize - partitions_included,
+                                    );
                                     partitions_included += pps_to_include;
                                     for i in 0..pps_to_include {
                                         //p.response_partition_limit
@@ -115,14 +118,21 @@ impl Request {
                                             leader_epoch: 0,
                                             replica_nodes: vec![],
                                             isr_nodes: vec![],
+                                            eligible_leader_repilcas: vec![],
+                                            last_known_elr: vec![],
                                             offline_replicas: vec![],
+                                            tagged_field: 0,
                                         });
                                     }
                                     ps
                                 }),
+                                topic_authorized_operations: 0x1234,
+                                tagged_field: 0,
                             }
                         })
                         .collect(),
+                    next_cursor: None,
+                    tagged_field: 0,
                 };
                 println!("======================================== response ==============================");
                 println!("{:?}", pr);
