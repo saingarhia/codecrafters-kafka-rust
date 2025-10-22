@@ -1,5 +1,5 @@
 // implements Kafka body
-use crate::kafka::{apikey, errors, fetch, header, partitions};
+use crate::kafka::{apikey, errors, fetch, header, partitions, produce};
 use std::fmt;
 use std::io::Read;
 
@@ -8,6 +8,7 @@ pub enum RequestBody {
     ApiVersions(u32, u8), // throttle_ms and tagged buffer etc
     DescribePartitions(partitions::PartitionsRequest),
     Fetch(fetch::FetchRequest),
+    Produce(produce::ProduceRequest),
 }
 
 impl RequestBody {
@@ -18,6 +19,7 @@ impl RequestBody {
             apikey::ApiKey::DescribeTopicPartitions => {
                 RequestBody::DescribePartitions(partitions::PartitionsRequest::new(req)?)
             }
+            apikey::ApiKey::Produce => RequestBody::Produce(produce::ProduceRequest::new(req)?),
         };
         Ok(s)
     }

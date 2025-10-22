@@ -138,6 +138,11 @@ impl Request {
                 println!("================================================================================");
                 pr.serialize(response)?;
             }
+            body::RequestBody::Produce(p) => {
+                println!("======================= its Produce ====================");
+                // tag buffer is first (immediately after correlation id) as per the test
+                writer::write_bytes(response, &0_u8)?;
+            }
         }
         Ok(())
     }

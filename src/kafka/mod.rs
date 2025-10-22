@@ -7,6 +7,7 @@ pub mod incoming;
 pub mod metadata;
 pub mod parser;
 pub mod partitions;
+pub mod produce;
 pub mod records;
 pub mod writer;
 
@@ -22,6 +23,9 @@ pub const MAX_SUPPORTED_FETCH_VER: u16 = 16;
 pub const KAFKA_RECORDTYPE_FEATURE: i8 = 12;
 pub const KAFKA_RECORDTYPE_TOPIC: i8 = 2;
 pub const KAFKA_RECORDTYPE_PARTITION: i8 = 3;
+
+pub const MIN_SUPPORTED_PRODUCE_VERSION: u16 = 0;
+pub const MAX_SUPPORTED_PRODUCE_VERSION: u16 = 11;
 
 #[repr(u16)]
 #[derive(Debug)]

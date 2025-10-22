@@ -6,6 +6,7 @@ use std::io::Read;
 const FETCH_APIKEY: u16 = 1;
 const API_VERSIONS_APIKEY: u16 = 18;
 const DESCRIBE_PARTITIONS_APIKEY: u16 = 75;
+const PRODUCE_APIKEY: u16 = 0;
 
 #[repr(u16)]
 #[derive(Debug, Copy, Clone)]
@@ -13,6 +14,7 @@ pub enum ApiKey {
     Fetch = FETCH_APIKEY,
     ApiVersions = API_VERSIONS_APIKEY,
     DescribeTopicPartitions = DESCRIBE_PARTITIONS_APIKEY,
+    Produce = PRODUCE_APIKEY,
 }
 
 impl ApiKey {
@@ -35,6 +37,7 @@ impl fmt::Display for ApiKey {
             Self::Fetch => write!(f, "fetch"),
             Self::ApiVersions => write!(f, "api-versions"),
             Self::DescribeTopicPartitions => write!(f, "describe-topic-partitions"),
+            Self::Produce => write!(f, "produce"),
         }
     }
 }
@@ -46,6 +49,7 @@ impl TryFrom<u16> for ApiKey {
             FETCH_APIKEY => Ok(Self::Fetch),
             API_VERSIONS_APIKEY => Ok(Self::ApiVersions),
             DESCRIBE_PARTITIONS_APIKEY => Ok(Self::DescribeTopicPartitions),
+            PRODUCE_APIKEY => Ok(Self::Produce),
             i @ (0..=75) => Err(KafkaErrors::Unimplemented(format!("apikey {i}"))),
             i => Err(KafkaErrors::InvalidApiKey(format!("invalid apikey {i}"))),
         }
@@ -58,7 +62,7 @@ pub struct SupportedApiKeys {
     pub key: u16,
 }
 
-pub const SUPPORTED_APIKEYS: &[SupportedApiKeys; 3] = &[
+pub const SUPPORTED_APIKEYS: &[SupportedApiKeys; 4] = &[
     // API Versions request
     SupportedApiKeys {
         min: super::MIN_SUPPORTED_API_VERSION,
@@ -76,5 +80,11 @@ pub const SUPPORTED_APIKEYS: &[SupportedApiKeys; 3] = &[
         min: super::MIN_SUPPORTED_DESCRIBE_PARTITION_VER,
         max: super::MAX_SUPPORTED_DESCRIBE_PARTITION_VER,
         key: DESCRIBE_PARTITIONS_APIKEY,
+    },
+    // Produce partitions
+    SupportedApiKeys {
+        min: super::MIN_SUPPORTED_PRODUCE_VERSION,
+        max: super::MAX_SUPPORTED_PRODUCE_VERSION,
+        key: PRODUCE_APIKEY,
     },
 ];
