@@ -55,7 +55,6 @@ impl Request {
                 if let Err(e) = fetch_resp.serialize(response) {
                     println!("there's error serializing data: {e:?}");
                 }
-                //fetch_resp.serialize(response)?;
                 println!("Fetch response serialized!!!!!");
             }
             body::RequestBody::ApiVersions(_throttle, _tbuf) => {

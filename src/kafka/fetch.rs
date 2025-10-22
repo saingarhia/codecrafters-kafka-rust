@@ -86,13 +86,15 @@ pub(crate) struct FetchTopic {
 impl std::fmt::Display for FetchTopic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output = String::new();
+        // conv ert u128 into individual bytes
+        let name = if let Ok(n) = String::from_utf8(self.topic_id.to_be_bytes().to_vec()) {
+            n
+        } else {
+            "unable-to-convert".into()
+        };
         let _ = std::fmt::write(
             &mut output,
-            format_args!(
-                "topic: {}, partitions: {}",
-                self.topic_id,
-                self.partitions.len()
-            ),
+            format_args!("topic: {}, partitions: {}", name, self.partitions.len()),
         );
         self.partitions.iter().for_each(|p| {
             let _ = std::fmt::write(&mut output, format_args!("Partition info: {}", p));
@@ -227,7 +229,6 @@ struct FetchResponsePartition {
     log_start_offset: u64,
     aborted_transactions: Vec<FetchResponseAbortedTransaction>,
     preferred_read_replica: u32,
-    //records: Vec<records::RecordsBatch>,
     records: Vec<u8>,
     tag_buffer: u8,
 }
@@ -240,10 +241,11 @@ impl FetchResponsePartition {
             topic_meta.topic_name, partition
         );
 
-        let records = std::fs::read(log_file_name).unwrap();
+        let records = std::fs::read(&log_file_name).unwrap();
         Self {
+            partiton_index: partition,
             aborted_transactions,
-            //error_code: 0, //FETCH_RESPONSE_UNKNOWN_TOPIC,
+            error_code: 0,
             records,
             ..Default::default()
         }
@@ -274,8 +276,8 @@ impl FetchResponsePartition {
             //writer::write_bytes(resp, &(self.records.len() as u8 + 1))?;
             //self.records.iter().try_for_each(|t| t.serialize(resp))?;
         } else {
-            // hard code 2 records for now
-            writer::write_varint(resp, 1 + self.records.len())?;
+            writer::write_uvarint(resp, 1 + self.records.len() as i32)?;
+            //writer::write_varint_main(resp, 1 + self.records.len() as i32)?;
             resp.write_all(&self.records)?;
         }
         writer::write_bytes(resp, &self.tag_buffer)?;
