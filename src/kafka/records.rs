@@ -251,7 +251,9 @@ impl KafkaRecord {
     pub fn deserialize<R: Read>(buffer: &mut R) -> errors::Result<Self> {
         let length = parser::read_varint(buffer)?;
         if length <= 0 {
-            return Err(errors::KafkaErrors::InvalidWriterArg("Invalid record length".to_string()).into());
+            return Err(
+                errors::KafkaErrors::InvalidWriterArg("Invalid record length".to_string()).into(),
+            );
         }
 
         let mut record_data = vec![0u8; length as usize];
@@ -422,6 +424,7 @@ impl KafkaRecordValue {
                 rec.version = version;
                 Ok(Self::KafkaRecordPartitionType(rec))
             }
+            //112 => {}
             _ => todo!("Kafka Record type {} not implemented!", frame_type),
         }
     }

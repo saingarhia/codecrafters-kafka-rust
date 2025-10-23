@@ -1,4 +1,5 @@
 pub mod apikey;
+pub mod basics;
 pub mod body;
 pub mod errors;
 pub mod fetch;

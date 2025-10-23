@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 use super::{ErrorCodes, MAX_SUPPORTED_API_VERSION, MIN_SUPPORTED_API_VERSION};
-use crate::kafka::{apikey, body, errors, fetch, header, metadata, partitions, writer};
+use crate::kafka::{apikey, body, errors, fetch, header, metadata, partitions, produce, writer};
 use std::fmt;
 use std::fs::metadata;
 use std::io::{self, Read, Write};
@@ -94,7 +94,6 @@ impl Request {
                         .iter()
                         .map(|topic_name| {
                             let topic = metadata.get_topic_by_name(&topic_name.name);
-                            println!("============== found topic: {topic:?}");
                             let uuid = topic.map(|tt| tt.uuid_u128).unwrap_or(0);
                             let partition = metadata.partition_map.get(&uuid);
                             partitions::Topic {
@@ -133,15 +132,17 @@ impl Request {
                     next_cursor: None,
                     tagged_field: 0,
                 };
-                println!("======================================== response ==============================");
-                println!("{:?}", pr);
-                println!("================================================================================");
                 pr.serialize(response)?;
             }
-            body::RequestBody::Produce(p) => {
+            body::RequestBody::Produce(prod) => {
                 println!("======================= its Produce ====================");
                 // tag buffer is first (immediately after correlation id) as per the test
                 writer::write_bytes(response, &0_u8)?;
+                let prod_resp = produce::ProduceResponse::new(prod, metadata);
+                if let Err(e) = prod_resp.serialize(response) {
+                    println!("there's error serializing data: {e:?}");
+                }
+                println!("Produce API response serialized!!!!!");
             }
         }
         Ok(())

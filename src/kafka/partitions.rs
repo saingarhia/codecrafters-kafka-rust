@@ -56,6 +56,7 @@ impl PartitionsRequest {
                 let tag_buffer = parser::read_byte(req)? as u8;
                 topics.push(TopicRequest { name, tag_buffer });
             }
+            topics.sort_by_key(|t| t.name.clone());
         }
         let response_partition_limit = parser::read_int(req)?;
         // Parse cursor
@@ -186,6 +187,7 @@ impl PartitionsResponse {
     pub fn serialize<W: Write>(&self, resp: &mut W) -> errors::Result<()> {
         writer::write_bytes(resp, &self.throttle_ms)?;
         writer::write_bytes(resp, &(1 + self.topics.len() as u8))?;
+
         self.topics
             .iter()
             .try_for_each(|topic| topic.serialize(resp))?;

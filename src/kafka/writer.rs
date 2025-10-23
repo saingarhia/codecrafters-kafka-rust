@@ -71,6 +71,7 @@ pub fn write_null<W: Write>(resp: &mut W) -> errors::Result<()> {
 #[allow(dead_code)]
 pub fn write_compact_string<W: Write>(resp: &mut W, s: &[u8]) -> errors::Result<()> {
     write_varint_main(resp, s.len() as i32)?;
+    //write_varint(resp, s.len() + 1)?;
     resp.write_all(s)?;
     Ok(())
 }
