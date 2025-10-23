@@ -106,7 +106,8 @@ impl ProduceRequestTopic {
 #[derive(Clone, Debug)]
 pub struct ProduceRequestTopicPartition {
     pub partition_idx: u32,
-    pub record_batches: Vec<records::RecordsBatch>,
+    //pub record_batches: Vec<records::RecordsBatch>,
+    record_batches: Vec<u8>,
     pub tag_buffer: u8,
 }
 
@@ -121,7 +122,7 @@ impl std::fmt::Display for ProduceRequestTopicPartition {
             ),
         );
         self.record_batches.iter().for_each(|r| {
-            let _ = std::fmt::write(&mut output, format_args!("{}\n", r));
+            let _ = std::fmt::write(&mut output, format_args!("{:?}\n", r));
         });
         write!(f, "{}", output)
     }
@@ -130,13 +131,9 @@ impl std::fmt::Display for ProduceRequestTopicPartition {
 impl ProduceRequestTopicPartition {
     pub fn new<R: Read>(req: &mut R) -> errors::Result<Self> {
         let partition_idx = parser::read_int(req)? as u32;
-        let num_record_batches = parser::read_byte(req)? as u8;
-        let mut record_batches = vec![];
-        for _i in 0..num_record_batches - 1 {
-            //let p = records::RecordsBatch::deserialize(req)?;
-            //record_batches.push(p);
-            record_batches.push(records::RecordsBatch::new());
-        }
+        let record_batch_length = parser::read_byte(req)? as usize - 1;
+        let mut record_batches = vec![0_u8; record_batch_length];
+        req.read_exact(&mut record_batches)?;
         let tag_buffer = parser::read_byte(req)? as u8;
         Ok(Self {
             partition_idx,
@@ -197,11 +194,16 @@ impl ProduceResponseTopic {
         Self {
             topic_name: request.topic_name.clone(),
             partitions: request.partitions.iter().fold(vec![], |mut acc, part| {
-                acc.push(ProduceResponseTopicPartition::new(
-                    part,
-                    metadata,
-                    &request.topic_name,
-                ));
+                let topic_name = String::from_utf8(request.topic_name.to_vec())
+                    .expect("Able to convert topic name UUID to string");
+                let pp = ProduceResponseTopicPartition::new(part, metadata, &topic_name);
+                if pp.error_code == 0 {
+                    if let Err(e) = pp.persist(part, metadata, &topic_name) {
+                        println!("Produce API - failed to persist metadata on disk!!: {e}");
+                    }
+                }
+
+                acc.push(pp);
                 acc
             }),
             tag_buffer: request.tag_buffer,
@@ -237,15 +239,13 @@ impl ProduceResponseTopicPartition {
     pub fn new(
         request: &ProduceRequestTopicPartition,
         metadata: &Arc<Mutex<metadata::Metadata>>,
-        topic_name: &[u8],
+        topic_name: &str,
     ) -> Self {
         let metadata = metadata.lock().unwrap();
         let mut error_code = PRODUCE_RESPONSE_UNKNOWN_TOPIC_OR_PARTITION;
         let mut base_offset = 0xFFFFFFFFFFFFFFFF;
         let mut log_start_offset = 0xFFFFFFFFFFFFFFFF;
-        let topic_name_s = String::from_utf8(topic_name.to_vec())
-            .expect("Able to convert topic name UUID to string");
-        if let Some(topic) = metadata.get_topic_by_name(&topic_name_s) {
+        if let Some(topic) = metadata.get_topic_by_name(topic_name) {
             if let Some(partitions) = metadata.partition_map.get(&topic.uuid_u128) {
                 if let Some(_pp) = partitions
                     .iter()
@@ -280,6 +280,20 @@ impl ProduceResponseTopicPartition {
         self.errors.iter().try_for_each(|e| e.serialize(resp))?;
         self.error_message.serialize(resp)?;
         writer::write_bytes(resp, &self.tag_buffer)?;
+        Ok(())
+    }
+
+    pub fn persist(
+        &self,
+        request: &ProduceRequestTopicPartition,
+        _metadata: &Arc<Mutex<metadata::Metadata>>,
+        topic_name: &str,
+    ) -> errors::Result<()> {
+        let log_file_name = format!(
+            "/tmp/kraft-combined-logs/{}-{}/00000000000000000000.log",
+            topic_name, request.partition_idx,
+        );
+        std::fs::write(&log_file_name, &request.record_batches)?;
         Ok(())
     }
 }
