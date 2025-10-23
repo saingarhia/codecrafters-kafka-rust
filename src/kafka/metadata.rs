@@ -84,7 +84,7 @@ impl Metadata {
                     kafka::records::KafkaRecordValue::KafkaRecordTopicRecordType(v) => {
                         let uuid = u128::from_be_bytes(v.topic_uuid);
                         let meta = TopicMetadata {
-                            uuid: v.topic_uuid.clone(),
+                            uuid: v.topic_uuid,
                             uuid_u128: uuid,
                             record_id1: i,
                             record_id2: r2,
@@ -131,7 +131,8 @@ impl Metadata {
     }
 
     #[allow(dead_code)]
-    pub fn get_partition() -> PartitionMetadata {
+    pub fn get_partition(&self, topic_uuid: &[u8]) -> Option<&Vec<PartitionMetadata>> {
+        println!("------------- {topic_uuid:?} based partition lookup not implemented!!");
         todo!()
     }
 }

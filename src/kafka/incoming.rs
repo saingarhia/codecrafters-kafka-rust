@@ -45,7 +45,7 @@ impl Request {
         // fill in the correlation id
         let _ = response.write(&self.header.get_correlation_id().to_be_bytes());
 
-        println!("Building response for Request: {}", self);
+        //println!("Building response for Request: {}", self);
         let api_ver = self.header.get_api_ver();
         match &self.body {
             body::RequestBody::Fetch(fetcher) => {
@@ -140,9 +140,8 @@ impl Request {
                 writer::write_bytes(response, &0_u8)?;
                 let prod_resp = produce::ProduceResponse::new(prod, metadata);
                 if let Err(e) = prod_resp.serialize(response) {
-                    println!("there's error serializing data: {e:?}");
+                    println!("there's error serializing produce response: {e:?}");
                 }
-                println!("Produce API response serialized!!!!!");
             }
         }
         Ok(())

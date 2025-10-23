@@ -197,7 +197,11 @@ impl ProduceResponseTopic {
         Self {
             topic_name: request.topic_name.clone(),
             partitions: request.partitions.iter().fold(vec![], |mut acc, part| {
-                acc.push(ProduceResponseTopicPartition::new(part, metadata));
+                acc.push(ProduceResponseTopicPartition::new(
+                    part,
+                    metadata,
+                    &request.topic_name,
+                ));
                 acc
             }),
             tag_buffer: request.tag_buffer,
@@ -232,14 +236,34 @@ pub struct ProduceResponseTopicPartition {
 impl ProduceResponseTopicPartition {
     pub fn new(
         request: &ProduceRequestTopicPartition,
-        _metadata: &Arc<Mutex<metadata::Metadata>>,
+        metadata: &Arc<Mutex<metadata::Metadata>>,
+        topic_name: &[u8],
     ) -> Self {
+        let metadata = metadata.lock().unwrap();
+        let mut error_code = PRODUCE_RESPONSE_UNKNOWN_TOPIC_OR_PARTITION;
+        let mut base_offset = 0xFFFFFFFFFFFFFFFF;
+        let mut log_start_offset = 0xFFFFFFFFFFFFFFFF;
+        let topic_name_s = String::from_utf8(topic_name.to_vec())
+            .expect("Able to convert topic name UUID to string");
+        if let Some(topic) = metadata.get_topic_by_name(&topic_name_s) {
+            if let Some(partitions) = metadata.partition_map.get(&topic.uuid_u128) {
+                if let Some(_pp) = partitions
+                    .iter()
+                    .find(|p| p.partition_id as u32 == request.partition_idx)
+                {
+                    error_code = 0;
+                    base_offset = 0;
+                    log_start_offset = 0;
+                }
+            }
+        }
+
         Self {
             partition_id: request.partition_idx,
-            error_code: PRODUCE_RESPONSE_UNKNOWN_TOPIC_OR_PARTITION,
-            base_offset: 0xFFFFFFFFFFFFFFFF,
+            error_code,
+            base_offset,
             log_append_time: 0xFFFFFFFFFFFFFFFF,
-            log_start_offset: 0xFFFFFFFFFFFFFFFF,
+            log_start_offset,
             errors: vec![],
             error_message: basics::CompactNullableString::from(vec![]),
             tag_buffer: request.tag_buffer,
